@@ -30,7 +30,7 @@ export default function AdminDepositsPage() {
                         </TableHeader>
                         <TableBody>
                             {allDeposits.map(deposit => {
-                                const user = getUserById(deposit.userId);
+                                const user = getUserById(deposit.userId!);
                                 return (
                                     <TableRow key={deposit.id}>
                                         <TableCell>

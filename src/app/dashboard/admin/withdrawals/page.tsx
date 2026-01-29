@@ -30,7 +30,7 @@ export default function AdminWithdrawalsPage() {
                         </TableHeader>
                         <TableBody>
                             {allWithdrawals.map(withdrawal => {
-                                const user = getUserById(withdrawal.userId);
+                                const user = getUserById(withdrawal.userId!);
                                 return (
                                     <TableRow key={withdrawal.id}>
                                         <TableCell>

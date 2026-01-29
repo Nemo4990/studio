@@ -29,6 +29,7 @@ export type Task = {
 
 export type Deposit = {
   id: string;
+  userId?: string;
   amount: number;
   currency: 'BTC' | 'ETH' | 'USDT';
   status: 'pending' | 'confirmed' | 'failed';
@@ -38,6 +39,7 @@ export type Deposit = {
 
 export type Withdrawal = {
   id:string;
+  userId?: string;
   amount: number;
   currency: 'USDT';
   status: 'pending' | 'approved' | 'rejected';
