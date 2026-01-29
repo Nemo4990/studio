@@ -35,6 +35,12 @@
       "description": "User avatar",
       "imageUrl": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3Njk2MzQxMjd8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "person portrait"
+    },
+    {
+      "id": "partners_hero",
+      "description": "People in business suits holding celebration banners for TaskVerse.",
+      "imageUrl": "https://images.unsplash.com/photo-1758599543110-f9cf3903a2ad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxidXNpbmVzcyUyMGNlbGVicmF0aW9ufGVufDB8fHx8MTc2OTcwMjA4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "business celebration"
     }
   ]
 }

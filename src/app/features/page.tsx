@@ -3,6 +3,8 @@ import PublicHeader from '@/components/landing/public-header';
 import { Bitcoin } from 'lucide-react';
 import React from 'react';
 import { LogoScroller } from '@/components/landing/logo-scroller';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 // Using React components for logos for better reusability and clarity
 const FordLogo = () => <span className="font-headline text-4xl font-bold" style={{color: '#003478'}}>Ford</span>;
@@ -83,18 +85,31 @@ const blockchainPartners = [
   { name: 'Polkadot', logo: <PolkadotLogo /> },
 ];
 
+const partnersHeroImage = PlaceHolderImages.find(img => img.id === 'partners_hero');
+
 export default function FeaturesPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <PublicHeader />
       <main className="flex-1">
-        <section className="py-20 md:py-32">
-          <div className="container">
-            <div className="mx-auto max-w-3xl text-center">
-              <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-5xl md:text-6xl">
+        <section className="relative flex items-center justify-center text-center text-white py-20 md:py-32">
+          {partnersHeroImage && (
+            <Image
+              src={partnersHeroImage.imageUrl}
+              alt={partnersHeroImage.description}
+              fill
+              className="object-cover"
+              data-ai-hint={partnersHeroImage.imageHint}
+              priority
+            />
+          )}
+          <div className="absolute inset-0 bg-black/60" />
+          <div className="container relative z-10">
+            <div className="mx-auto max-w-3xl">
+              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
                 Our Partners & Sponsors
               </h1>
-              <p className="mt-6 text-lg leading-8 text-foreground/70">
+              <p className="mt-6 text-lg leading-8 text-white/80">
                 We are proud to collaborate with leading companies in the
                 blockchain industry and are supported by world-renowned
                 sponsors.
