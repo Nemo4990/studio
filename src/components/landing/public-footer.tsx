@@ -24,16 +24,16 @@ export default function PublicFooter() {
             <div>
                 <h4 className="font-headline font-semibold">Company</h4>
                 <ul className="mt-4 space-y-2 text-sm">
-                    <li><a href="#" className="text-foreground/60 hover:text-foreground">About Us</a></li>
-                    <li><a href="#" className="text-foreground/60 hover:text-foreground">Careers</a></li>
-                    <li><a href="#" className="text-foreground/60 hover:text-foreground">Contact</a></li>
+                    <li><Link href="/about" className="text-foreground/60 hover:text-foreground">About Us</Link></li>
+                    <li><Link href="/careers" className="text-foreground/60 hover:text-foreground">Careers</Link></li>
+                    <li><Link href="/contact" className="text-foreground/60 hover:text-foreground">Contact</Link></li>
                 </ul>
             </div>
             <div>
                 <h4 className="font-headline font-semibold">Legal</h4>
                 <ul className="mt-4 space-y-2 text-sm">
-                    <li><a href="#" className="text-foreground/60 hover:text-foreground">Privacy Policy</a></li>
-                    <li><a href="#" className="text-foreground/60 hover:text-foreground">Terms of Service</a></li>
+                    <li><Link href="/privacy" className="text-foreground/60 hover:text-foreground">Privacy Policy</Link></li>
+                    <li><Link href="/terms" className="text-foreground/60 hover:text-foreground">Terms of Service</Link></li>
                 </ul>
             </div>
         </div>
