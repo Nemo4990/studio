@@ -39,47 +39,55 @@ export const testimonials: Testimonial[] = [
 ];
 
 export const userTasks: Task[] = [
-  {
-    id: '1',
-    title: 'Engage on Social Media',
-    description: 'Like, comment, and share our latest post on X.',
-    reward: 5,
-    minLevel: 1,
-    status: 'available',
-  },
-  {
-    id: '2',
-    title: 'Write a Product Review',
-    description: 'Submit a detailed review of our platform on a tech forum.',
-    reward: 20,
-    minLevel: 1,
-    status: 'available',
-  },
-  {
-    id: '3',
-    title: 'Create a Tutorial Video',
-    description: 'Create a 2-minute video on how to use a specific feature.',
-    reward: 50,
-    minLevel: 2,
-    status: 'locked',
-  },
-  {
-    id: '4',
-    title: 'Refer a Friend',
-    description: 'Invite a friend to join TaskVerse and complete one task.',
-    reward: 15,
-    minLevel: 1,
-    status: 'completed',
-  },
-  {
-    id: '5',
-    title: 'Advanced Market Analysis',
-    description: 'Submit a 500-word analysis on the current crypto market trends.',
-    reward: 100,
-    minLevel: 3,
-    status: 'locked',
-  },
-];
+    {
+      id: '1',
+      title: 'Daily Check-in',
+      description: 'Claim your daily bonus just for logging in. Consistency is key!',
+      reward: 2,
+      minLevel: 1,
+      status: 'available',
+    },
+    {
+      id: '2',
+      title: 'Crypto Beginner\'s Quiz',
+      description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!',
+      reward: 10,
+      minLevel: 1,
+      status: 'available',
+    },
+    {
+      id: '3',
+      title: 'Meme Magic Contest',
+      description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!',
+      reward: 25,
+      minLevel: 2,
+      status: 'available',
+    },
+    {
+      id: '4',
+      title: 'Feature Feedback',
+      description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.',
+      reward: 15,
+      minLevel: 1,
+      status: 'completed',
+    },
+    {
+      id: '5',
+      title: 'Blockchain Detective',
+      description: 'Find the secret message hidden in a transaction on the Ethereum testnet. A real challenge for a true crypto sleuth.',
+      reward: 75,
+      minLevel: 3,
+      status: 'locked',
+    },
+    {
+      id: '6',
+      title: 'Spread the Word',
+      description: 'Tweet about your earnings on TaskVerse with a screenshot and the #TaskVerse hashtag.',
+      reward: 10,
+      minLevel: 1,
+      status: 'available',
+    },
+  ];
 
 
 const generateUsers = (count: number): User[] => {
