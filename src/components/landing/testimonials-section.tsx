@@ -49,7 +49,7 @@ export default function TestimonialsSection() {
           </h2>
           <p className="mt-6 text-lg leading-8 text-foreground/70">
             Don&apos;t just take our word for it. Here&apos;s what our users have to
-            say about their experience with NovaChain Nexus.
+            say about their experience with TaskVerse.
           </p>
         </div>
         <Carousel

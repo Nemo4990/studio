@@ -16,7 +16,7 @@ export const testimonials: Testimonial[] = [
     name: 'Alex Johnson',
     role: 'Crypto Enthusiast',
     avatarUrl: findImage('testimonial1'),
-    text: 'NovaChain Nexus has revolutionized how I earn crypto. The tasks are engaging and the rewards are instant. A must-have app!',
+    text: 'TaskVerse has revolutionized how I earn crypto. The tasks are engaging and the rewards are instant. A must-have app!',
   },
   {
     name: 'Samantha Bee',
@@ -34,7 +34,7 @@ export const testimonials: Testimonial[] = [
     name: 'Maria Garcia',
     role: 'Gig Worker',
     avatarUrl: findImage('testimonial4'),
-    text: 'As someone new to crypto, NovaChain Nexus made it incredibly easy to get started. The deposit tracking is transparent and trustworthy.',
+    text: 'As someone new to crypto, TaskVerse made it incredibly easy to get started. The deposit tracking is transparent and trustworthy.',
   },
 ];
 
@@ -66,7 +66,7 @@ export const userTasks: Task[] = [
   {
     id: '4',
     title: 'Refer a Friend',
-    description: 'Invite a friend to join NovaChain Nexus and complete one task.',
+    description: 'Invite a friend to join TaskVerse and complete one task.',
     reward: 15,
     minLevel: 1,
     status: 'completed',
@@ -116,7 +116,7 @@ export const mockUser: User = {
 export const mockAdmin: User = {
   id: 'admin123',
   name: 'Admin',
-  email: 'admin@novachain.io',
+  email: 'admin@taskverse.io',
   avatarUrl: findImage('admin_avatar'),
   role: 'admin',
   level: 99,

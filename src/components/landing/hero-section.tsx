@@ -15,7 +15,7 @@ export default function HeroSection() {
             Complete Tasks, Earn Crypto Rewards
           </h1>
           <p className="mt-6 text-lg leading-8 text-foreground/70">
-            NovaChain Nexus is your gateway to the digital economy. Join our
+            TaskVerse is your gateway to the digital economy. Join our
             community, complete engaging tasks, and watch your crypto wallet
             grow.
           </p>

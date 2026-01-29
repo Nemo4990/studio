@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: {
-    default: 'NovaChain Nexus',
-    template: `%s | NovaChain Nexus`,
+    default: 'TaskVerse',
+    template: `%s | TaskVerse`,
   },
   description:
-    'Unlock your earning potential with NovaChain Nexus. Complete tasks, earn crypto, and grow your digital wallet.',
+    'Unlock your earning potential with TaskVerse. Complete tasks, earn crypto, and grow your digital wallet.',
 };
 
 export default function RootLayout({
