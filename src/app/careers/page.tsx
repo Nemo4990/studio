@@ -79,8 +79,8 @@ export default function CareersPage() {
             </div>
              <div className="mt-16 text-center">
                 <p className="text-muted-foreground">Don&apos;t see a role for you? We&apos;re always looking for talent.</p>
-                <Button variant="outline" className="mt-4">
-                    Get in touch
+                <Button variant="outline" className="mt-4" asChild>
+                  <Link href="/contact">Get in touch</Link>
                 </Button>
             </div>
           </div>
