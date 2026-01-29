@@ -33,18 +33,19 @@ export default function AppSidebar({ user }: AppSidebarProps) {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} legacyBehavior passHref>
-                <SidebarMenuButton
-                  isActive={pathname === item.href}
-                  className="relative"
-                >
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href}
+                className="relative"
+              >
+                <Link href={item.href}>
                   <item.icon className="size-4" />
                   <span>{item.label}</span>
                   {item.badge && (
                     <Badge className="absolute right-2" variant="destructive">{item.badge}</Badge>
                   )}
-                </SidebarMenuButton>
-              </Link>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -53,12 +54,12 @@ export default function AppSidebar({ user }: AppSidebarProps) {
         <SidebarMenu>
           {bottomNavItems.map((item) => (
              <SidebarMenuItem key={item.href}>
-             <Link href={item.href} legacyBehavior passHref>
-               <SidebarMenuButton isActive={pathname === item.href}>
-                 <item.icon className="size-4" />
-                 <span>{item.label}</span>
-               </SidebarMenuButton>
-             </Link>
+                <SidebarMenuButton asChild isActive={pathname === item.href}>
+                    <Link href={item.href}>
+                        <item.icon className="size-4" />
+                        <span>{item.label}</span>
+                    </Link>
+                </SidebarMenuButton>
            </SidebarMenuItem>
           ))}
           <SidebarMenuItem>
