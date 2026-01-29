@@ -2,6 +2,7 @@ import PublicFooter from '@/components/landing/public-footer';
 import PublicHeader from '@/components/landing/public-header';
 import { Bitcoin } from 'lucide-react';
 import React from 'react';
+import { LogoScroller } from '@/components/landing/logo-scroller';
 
 // Using React components for logos for better reusability and clarity
 const FordLogo = () => <span className="font-headline text-4xl font-bold" style={{color: '#003478'}}>Ford</span>;
@@ -113,16 +114,8 @@ export default function FeaturesPage() {
                 vision.
               </p>
             </div>
-            <div className="mt-16 grid grid-cols-2 items-center justify-items-center gap-y-12 gap-x-8 md:grid-cols-4">
-              {sponsors.map((sponsor) => (
-                <div
-                  key={sponsor.name}
-                  className="flex h-20 items-center justify-center transition-transform hover:scale-110"
-                  title={sponsor.name}
-                >
-                  {sponsor.logo}
-                </div>
-              ))}
+            <div className="mt-16">
+                <LogoScroller items={sponsors} speed="normal" />
             </div>
           </div>
         </section>
@@ -138,16 +131,8 @@ export default function FeaturesPage() {
                 the best opportunities.
               </p>
             </div>
-            <div className="mt-16 grid grid-cols-2 items-center justify-items-center gap-y-12 gap-x-8 md:grid-cols-3">
-              {blockchainPartners.map((partner) => (
-                <div
-                  key={partner.name}
-                  className="flex h-20 items-center justify-center text-foreground/80 transition-transform hover:scale-110"
-                  title={partner.name}
-                >
-                  {partner.logo}
-                </div>
-              ))}
+            <div className="mt-16">
+                <LogoScroller items={blockchainPartners} speed="slow" />
             </div>
           </div>
         </section>
