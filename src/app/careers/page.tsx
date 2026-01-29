@@ -3,27 +3,32 @@ import PublicHeader from '@/components/landing/public-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 const openPositions = [
     {
         title: 'Senior Blockchain Developer',
         location: 'Remote',
         department: 'Engineering',
+        description: 'Lead the development of our core blockchain infrastructure, focusing on scalability, security, and decentralization. You will work with cutting-edge technologies to build the future of our platform.',
     },
     {
         title: 'Frontend Engineer (React/Next.js)',
         location: 'Remote',
         department: 'Engineering',
+        description: 'Craft beautiful, intuitive, and performant user interfaces using Next.js and React. You will collaborate closely with designers and backend engineers to create a seamless user experience.',
     },
     {
         title: 'Product Marketing Manager',
         location: 'New York, NY',
         department: 'Marketing',
+        description: 'Drive the go-to-market strategy for new features and products. You will be responsible for product positioning, messaging, and launching campaigns that resonate with our target audience.',
     },
     {
         title: 'Community Manager',
         location: 'Remote',
         department: 'Community',
+        description: 'Engage and grow our vibrant community of users. You will be the voice of TaskVerse on social media, forums, and other channels, fostering a positive and supportive environment.',
     },
 ];
 
@@ -52,19 +57,21 @@ export default function CareersPage() {
             </h2>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {openPositions.map((position) => (
-                <Card key={position.title}>
+                <Card key={position.title} className="flex flex-col">
                   <CardHeader>
                     <CardTitle className="font-headline">{position.title}</CardTitle>
                     <CardDescription>{position.department} &middot; {position.location}</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-grow">
                     <p className="text-sm text-muted-foreground">
-                      We&apos;re looking for an experienced {position.title} to help us innovate and grow.
+                      {position.description}
                     </p>
                   </CardContent>
                   <CardFooter>
-                    <Button variant="link" className="p-0">
-                        Apply Now <ArrowRight className="ml-2 size-4" />
+                    <Button variant="link" className="p-0" asChild>
+                        <Link href="/careers/apply">
+                            Apply Now <ArrowRight className="ml-2 size-4" />
+                        </Link>
                     </Button>
                   </CardFooter>
                 </Card>
