@@ -11,8 +11,8 @@ const FordLogo = () => <span className="font-headline text-4xl font-bold" style=
 const McCloskiLogo = () => <span className="font-headline text-3xl font-bold">McCloski</span>;
 
 const BinanceLogo = () => (
-  <svg role="img" aria-label="Binance" className="h-12 w-auto" viewBox="0 0 1024 1024" fill="#F0B90B" xmlns="http://www.w3.org/2000/svg">
-    <path d="M512 896L211.2 512 512 128l300.8 384L512 896zM307.2 512l204.8-256 204.8 256-204.8 256-204.8-256zM102.4 512L256 307.2 409.6 512 256 716.8 102.4 512zM921.6 512L768 307.2 614.4 512 768 716.8 921.6 512zM512 0L384 211.2 512 384 640 211.2 512 0zM512 1024l128-211.2-128-179.2-128 179.2L512 1024z"/>
+  <svg role="img" aria-label="Binance" className="h-12 w-auto" viewBox="0 0 96 96" fill="#F0B90B" xmlns="http://www.w3.org/2000/svg">
+    <path d="M48 3.75l-7.25 7.25-7.25-7.25-7.25 7.25L19 3.75 3.75 19l7.25 7.25-7.25 7.25 7.25 7.25-7.25 7.25L19 62l-7.25 7.25 7.25 7.25 7.25-7.25 7.25 7.25L48 92.25l7.25-7.25 7.25 7.25 7.25-7.25 7.25 7.25L92.25 77l-7.25-7.25 7.25-7.25-7.25-7.25 7.25-7.25L77 19l-7.25-7.25 7.25-7.25-7.25-7.25-7.25 7.25L48 3.75zM48 31.5l-9.25-9.25-6 6L42 37.5l-9.25 9.25 6 6L48 43.5l9.25 9.25 6-6L54 37.5l9.25-9.25-6-6L48 31.5z" />
   </svg>
 );
 
