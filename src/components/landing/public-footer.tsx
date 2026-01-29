@@ -15,7 +15,8 @@ export default function PublicFooter() {
             <div>
                 <h4 className="font-headline font-semibold">Product</h4>
                 <ul className="mt-4 space-y-2 text-sm">
-                    <li><Link href="/#features" className="text-foreground/60 hover:text-foreground">Features</Link></li>
+                    <li><Link href="/#features" className="text-foreground/60 hover:text-foreground">How It Works</Link></li>
+                    <li><Link href="/features" className="text-foreground/60 hover:text-foreground">Partners</Link></li>
                     <li><Link href="/#testimonials" className="text-foreground/60 hover:text-foreground">Testimonials</Link></li>
                     <li><Link href="/login" className="text-foreground/60 hover:text-foreground">Login</Link></li>
                 </ul>

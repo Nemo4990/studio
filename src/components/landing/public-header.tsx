@@ -15,7 +15,13 @@ export default function PublicHeader() {
               href="/#features"
               className="transition-colors hover:text-foreground/80 text-foreground/60"
             >
-              Features
+              How It Works
+            </Link>
+            <Link
+              href="/features"
+              className="transition-colors hover:text-foreground/80 text-foreground/60"
+            >
+              Partners
             </Link>
             <Link
               href="/#testimonials"
