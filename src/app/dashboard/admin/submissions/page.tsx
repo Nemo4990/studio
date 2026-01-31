@@ -16,12 +16,11 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import type { TaskSubmission, User } from '@/lib/types';
+import type { TaskSubmission } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
   collectionGroup,
   doc,
-  getDoc,
   runTransaction,
   Timestamp,
   updateDoc,
@@ -131,7 +130,7 @@ function SubmissionTable({
 export default function AdminSubmissionsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { user: adminUser } = useUser();
+  const { user: adminUser, loading: userLoading } = useUser();
 
   const submissionsQuery = useMemoFirebase(
     () =>
@@ -140,9 +139,11 @@ export default function AdminSubmissionsPage() {
         : null,
     [firestore, adminUser]
   );
-  const { data: submissions, isLoading } =
+  const { data: submissions, isLoading: submissionsLoading } =
     useCollection<TaskSubmission>(submissionsQuery);
 
+  const isLoading = userLoading || submissionsLoading;
+    
   const handleApprove = async (submission: TaskSubmission) => {
     if (!firestore) return;
     toast({ title: 'Approving submission...' });
