@@ -65,7 +65,7 @@ export function useUser(): UseUserReturn {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
           email: firebaseUser.email,
-          role: 'user',
+          role: 'admin',
           level: 1,
           walletBalance: 0,
           createdAt: serverTimestamp(),

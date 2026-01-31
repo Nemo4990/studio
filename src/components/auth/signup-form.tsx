@@ -41,7 +41,7 @@ export function SignupForm() {
         id: user.uid,
         name,
         email,
-        role: 'user',
+        role: 'admin',
         level: 1,
         walletBalance: 0,
         createdAt: serverTimestamp(),
