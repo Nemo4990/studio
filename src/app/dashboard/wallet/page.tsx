@@ -27,41 +27,105 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { deposits, withdrawals, mockAgents } from '@/lib/data';
+import { mockAgents } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import React, { useState } from 'react';
-import type { Agent } from '@/lib/types';
+import React, { useState, useMemo } from 'react';
+import type { Agent, Deposit, Withdrawal } from '@/lib/types';
 import { Banknote, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  orderBy,
+  Timestamp,
+} from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useMemoFirebase } from '@/hooks/use-memo-firebase';
+
+type Transaction = (
+  | ({ type: 'deposit' } & Deposit)
+  | ({ type: 'withdrawal' } & Withdrawal)
+) & { date: Date };
 
 export default function WalletPage() {
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
 
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
-  
+
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
-  
+
   const [loading, setLoading] = useState(false);
 
   const countries = [...new Set(mockAgents.map((agent) => agent.country))];
   const filteredAgents = mockAgents.filter(
     (agent) => agent.country === selectedCountry
   );
-  
+
   const maxWithdrawalAmount = user ? user.level * 100 : 0;
+
+  const depositsQuery = useMemoFirebase(
+    () =>
+      user && firestore
+        ? query(
+            collection(firestore, `users/${user.id}/deposits`),
+            orderBy('createdAt', 'desc')
+          )
+        : null,
+    [user, firestore]
+  );
+  const { data: deposits, isLoading: depositsLoading } =
+    useCollection<Deposit>(depositsQuery);
+
+  const withdrawalsQuery = useMemoFirebase(
+    () =>
+      user && firestore
+        ? query(
+            collection(firestore, `users/${user.id}/withdrawals`),
+            orderBy('requestedAt', 'desc')
+          )
+        : null,
+    [user, firestore]
+  );
+  const { data: withdrawals, isLoading: withdrawalsLoading } =
+    useCollection<Withdrawal>(withdrawalsQuery);
+
+  const transactionHistory: Transaction[] = useMemo(() => {
+    if (!deposits || !withdrawals) return [];
+
+    const combined: Transaction[] = [];
+
+    deposits.forEach((d) => {
+      const date = (d.createdAt as unknown as Timestamp)?.toDate
+        ? (d.createdAt as unknown as Timestamp).toDate()
+        : new Date();
+      combined.push({ ...d, type: 'deposit', date });
+    });
+
+    withdrawals.forEach((w) => {
+      const date = (w.requestedAt as unknown as Timestamp)?.toDate
+        ? (w.requestedAt as unknown as Timestamp).toDate()
+        : new Date();
+      combined.push({ ...w, type: 'withdrawal', date });
+    });
+
+    return combined.sort((a, b) => b.date.getTime() - a.date.getTime());
+  }, [deposits, withdrawals]);
+
+  const isLoadingHistory = userLoading || depositsLoading || withdrawalsLoading;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -81,18 +145,19 @@ export default function WalletPage() {
 
     const amount = parseFloat(depositAmount);
     if (isNaN(amount) || amount <= 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Invalid Amount',
-            description: 'Please enter a valid deposit amount.',
-        });
-        setLoading(false);
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Amount',
+        description: 'Please enter a valid deposit amount.',
+      });
+      setLoading(false);
+      return;
     }
 
     const depositData = {
       userId: user.id,
       agentId: selectedAgent.id,
+      agentName: selectedAgent.name,
       amount: amount,
       currency: selectedAgent.country === 'Nigeria' ? 'NGN' : 'USD', // Simple currency logic
       status: 'pending',
@@ -123,7 +188,8 @@ export default function WalletPage() {
         toast({
           variant: 'destructive',
           title: 'Submission Failed',
-          description: 'There was a problem submitting your request. Please try again.',
+          description:
+            'There was a problem submitting your request. Please try again.',
         });
       })
       .finally(() => {
@@ -132,94 +198,108 @@ export default function WalletPage() {
   };
 
   const handleWithdrawalSubmit = () => {
-    if (!user || !firestore || !withdrawalAmount || !bankName || !accountNumber || !accountName) {
-        toast({
-            variant: 'destructive',
-            title: 'Missing Information',
-            description: 'Please fill out all fields for the withdrawal request.',
-        });
-        return;
+    if (
+      !user ||
+      !firestore ||
+      !withdrawalAmount ||
+      !bankName ||
+      !accountNumber ||
+      !accountName
+    ) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please fill out all fields for the withdrawal request.',
+      });
+      return;
     }
     setLoading(true);
 
     const amount = parseFloat(withdrawalAmount);
 
     if (isNaN(amount) || amount <= 0) {
-        toast({
-            variant: 'destructive',
-            title: 'Invalid Amount',
-            description: 'Please enter a valid withdrawal amount.',
-        });
-        setLoading(false);
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Amount',
+        description: 'Please enter a valid withdrawal amount.',
+      });
+      setLoading(false);
+      return;
     }
 
     if (amount > user.walletBalance) {
-        toast({
-            variant: 'destructive',
-            title: 'Insufficient Balance',
-            description: `Your wallet balance is only $${user.walletBalance.toFixed(2)}.`,
-        });
-        setLoading(false);
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Insufficient Balance',
+        description: `Your wallet balance is only $${user.walletBalance.toFixed(
+          2
+        )}.`,
+      });
+      setLoading(false);
+      return;
     }
 
     if (amount > maxWithdrawalAmount) {
-        toast({
-            variant: 'destructive',
-            title: 'Withdrawal Limit Exceeded',
-            description: `Your current level allows a maximum withdrawal of $${maxWithdrawalAmount.toFixed(2)}.`,
-        });
-        setLoading(false);
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Withdrawal Limit Exceeded',
+        description: `Your current level allows a maximum withdrawal of $${maxWithdrawalAmount.toFixed(
+          2
+        )}.`,
+      });
+      setLoading(false);
+      return;
     }
 
     const withdrawalData = {
-        userId: user.id,
-        amount: amount,
-        currency: 'USD', // Assuming USD as per the label
-        userBankInfo: {
-            bankName,
-            accountNumber,
-            accountName,
-        },
-        status: 'pending',
-        requestedAt: serverTimestamp(),
+      userId: user.id,
+      amount: amount,
+      currency: 'USD', // Assuming USD as per the label
+      userBankInfo: {
+        bankName,
+        accountNumber,
+        accountName,
+      },
+      status: 'pending',
+      requestedAt: serverTimestamp(),
     };
 
-    const withdrawalsRef = collection(firestore, `users/${user.id}/withdrawals`);
+    const withdrawalsRef = collection(
+      firestore,
+      `users/${user.id}/withdrawals`
+    );
 
     addDoc(withdrawalsRef, withdrawalData)
-        .then(() => {
-            toast({
-                title: 'Withdrawal Request Submitted!',
-                description: 'Your request is pending admin approval.',
-            });
-            // Reset fields
-            setWithdrawalAmount('');
-            setBankName('');
-            setAccountNumber('');
-            setAccountName('');
-        })
-        .catch((serverError) => {
-            const permissionError = new FirestorePermissionError({
-                path: withdrawalsRef.path,
-                operation: 'create',
-                requestResourceData: withdrawalData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-
-            toast({
-                variant: 'destructive',
-                title: 'Submission Failed',
-                description: 'There was a problem submitting your request. Please try again.',
-            });
-        })
-        .finally(() => {
-            setLoading(false);
+      .then(() => {
+        toast({
+          title: 'Withdrawal Request Submitted!',
+          description: 'Your request is pending admin approval.',
         });
-};
+        // Reset fields
+        setWithdrawalAmount('');
+        setBankName('');
+        setAccountNumber('');
+        setAccountName('');
+      })
+      .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: withdrawalsRef.path,
+          operation: 'create',
+          requestResourceData: withdrawalData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
 
+        toast({
+          variant: 'destructive',
+          title: 'Submission Failed',
+          description:
+            'There was a problem submitting your request. Please try again.',
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   return (
     <>
@@ -271,7 +351,11 @@ export default function WalletPage() {
                     {filteredAgents.map((agent) => (
                       <Card
                         key={agent.id}
-                        className={cn('cursor-pointer', selectedAgent?.id === agent.id && 'border-primary ring-2 ring-primary')}
+                        className={cn(
+                          'cursor-pointer',
+                          selectedAgent?.id === agent.id &&
+                            'border-primary ring-2 ring-primary'
+                        )}
                         onClick={() => setSelectedAgent(agent)}
                       >
                         <CardHeader>
@@ -303,12 +387,16 @@ export default function WalletPage() {
                     <div className="space-y-1">
                       <Label>Account Number</Label>
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold font-mono">{selectedAgent.accountNumber}</p>
+                        <p className="font-semibold font-mono">
+                          {selectedAgent.accountNumber}
+                        </p>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="size-7"
-                          onClick={() => handleCopy(selectedAgent.accountNumber)}
+                          onClick={() =>
+                            handleCopy(selectedAgent.accountNumber)
+                          }
                         >
                           <Copy className="size-4" />
                         </Button>
@@ -316,13 +404,25 @@ export default function WalletPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="deposit-amount">Amount</Label>
-                      <Input id="deposit-amount" type="number" placeholder="Enter amount" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
+                      <Input
+                        id="deposit-amount"
+                        type="number"
+                        placeholder="Enter amount"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="proof">Proof of Payment</Label>
                       <Input id="proof" type="file" />
                     </div>
-                    <Button className="w-full" onClick={handleDepositSubmit} disabled={loading}>{loading ? 'Submitting...' : 'Submit Deposit Request'}</Button>
+                    <Button
+                      className="w-full"
+                      onClick={handleDepositSubmit}
+                      disabled={loading}
+                    >
+                      {loading ? 'Submitting...' : 'Submit Deposit Request'}
+                    </Button>
                   </CardContent>
                 </Card>
               )}
@@ -332,41 +432,79 @@ export default function WalletPage() {
         <TabsContent value="withdraw">
           <Card>
             <CardHeader>
-              <CardTitle className="font-headline">Request Withdrawal</CardTitle>
+              <CardTitle className="font-headline">
+                Request Withdrawal
+              </CardTitle>
               <CardDescription>
-                Enter your local bank details to request a withdrawal. Your maximum withdrawal amount is based on your current level.
+                Enter your local bank details to request a withdrawal. Your
+                maximum withdrawal amount is based on your current level.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {user && (
                 <div className="flex justify-between rounded-lg border p-4">
-                    <div>
-                        <p className="text-sm text-muted-foreground">Available Balance</p>
-                        <p className="text-lg font-bold">${user.walletBalance.toFixed(2)}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Max Withdrawal</p>
-                        <p className="text-lg font-bold">${maxWithdrawalAmount.toFixed(2)}</p>
-                    </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      Available Balance
+                    </p>
+                    <p className="text-lg font-bold">
+                      ${user.walletBalance.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm text-muted-foreground">
+                      Max Withdrawal
+                    </p>
+                    <p className="text-lg font-bold">
+                      ${maxWithdrawalAmount.toFixed(2)}
+                    </p>
+                  </div>
                 </div>
               )}
-               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="withdraw-amount">Amount (USD)</Label>
-                <Input id="withdraw-amount" type="number" placeholder="100.00" value={withdrawalAmount} onChange={e => setWithdrawalAmount(e.target.value)} />
+                <Input
+                  id="withdraw-amount"
+                  type="number"
+                  placeholder="100.00"
+                  value={withdrawalAmount}
+                  onChange={(e) => setWithdrawalAmount(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bank-name">Bank Name</Label>
-                <Input id="bank-name" placeholder="e.g., Chase Bank" value={bankName} onChange={e => setBankName(e.target.value)}/>
+                <Input
+                  id="bank-name"
+                  placeholder="e.g., Chase Bank"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="account-number">Account Number</Label>
-                <Input id="account-number" placeholder="Your account number" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
+                <Input
+                  id="account-number"
+                  placeholder="Your account number"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="account-name">Account Name</Label>
-                <Input id="account-name" placeholder="Name on the account" value={accountName} onChange={e => setAccountName(e.target.value)} />
+                <Input
+                  id="account-name"
+                  placeholder="Name on the account"
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                />
               </div>
-              <Button className="w-full" onClick={handleWithdrawalSubmit} disabled={loading || !user}>{loading ? 'Submitting...' : 'Request Withdrawal'}</Button>
+              <Button
+                className="w-full"
+                onClick={handleWithdrawalSubmit}
+                disabled={loading || !user}
+              >
+                {loading ? 'Submitting...' : 'Request Withdrawal'}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
@@ -392,58 +530,79 @@ export default function WalletPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {deposits.map((d) => (
-                    <TableRow key={d.id}>
-                      <TableCell>Deposit</TableCell>
-                      <TableCell>
-                        {d.amount.toLocaleString()} {d.currency}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            d.status === 'confirmed'
-                              ? 'default'
-                              : d.status === 'failed'
-                              ? 'destructive'
-                              : 'secondary'
-                          }
-                          className={cn(d.status === 'confirmed' && 'bg-green-500/80')}
-                        >
-                          {d.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{d.createdAt.toLocaleDateString()}</TableCell>
-                      <TableCell className="text-xs">
-                        via {d.agentName}
+                  {isLoadingHistory && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        Loading transaction history...
                       </TableCell>
                     </TableRow>
-                  ))}
-                  {withdrawals.map((w) => (
-                    <TableRow key={w.id}>
-                      <TableCell>Withdrawal</TableCell>
-                      <TableCell>
-                        {w.amount.toLocaleString()} {w.currency}
+                  )}
+                  {!isLoadingHistory && transactionHistory.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No transactions found.
                       </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            w.status === 'approved'
-                              ? 'default'
-                              : w.status === 'rejected'
-                              ? 'destructive'
-                              : 'secondary'
-                          }
-                           className={cn(w.status === 'approved' && 'bg-green-500/80')}
-                        >
-                          {w.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {w.requestedAt.toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{w.userBankInfo.bankName} - ...{w.userBankInfo.accountNumber.slice(-4)}</TableCell>
                     </TableRow>
-                  ))}
+                  )}
+                  {!isLoadingHistory &&
+                    transactionHistory.map((tx) =>
+                      tx.type === 'deposit' ? (
+                        <TableRow key={`dep-${tx.id}`}>
+                          <TableCell>Deposit</TableCell>
+                          <TableCell>
+                            {tx.amount.toLocaleString()} {tx.currency}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                tx.status === 'confirmed'
+                                  ? 'default'
+                                  : tx.status === 'failed'
+                                  ? 'destructive'
+                                  : 'secondary'
+                              }
+                              className={cn(
+                                tx.status === 'confirmed' && 'bg-green-500/80'
+                              )}
+                            >
+                              {tx.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{tx.date.toLocaleDateString()}</TableCell>
+                          <TableCell className="text-xs">
+                            via {tx.agentName}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        <TableRow key={`wd-${tx.id}`}>
+                          <TableCell>Withdrawal</TableCell>
+                          <TableCell>
+                            {tx.amount.toLocaleString()} {tx.currency}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                tx.status === 'approved'
+                                  ? 'default'
+                                  : tx.status === 'rejected'
+                                  ? 'destructive'
+                                  : 'secondary'
+                              }
+                              className={cn(
+                                tx.status === 'approved' && 'bg-green-500/80'
+                              )}
+                            >
+                              {tx.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{tx.date.toLocaleDateString()}</TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {tx.userBankInfo.bankName} - ...
+                            {tx.userBankInfo.accountNumber.slice(-4)}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    )}
                 </TableBody>
               </Table>
             </CardContent>

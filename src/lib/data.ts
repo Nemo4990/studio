@@ -117,18 +117,6 @@ export const mockAgents: Agent[] = [
     { id: 'agent4', name: 'Rachel Zane', country: 'USA', bankName: 'Chase', accountNumber: '5544332211' },
 ];
 
-export const deposits: Deposit[] = [
-    { id: 'dep1', userId: mockUsers[0].id, agentId: 'agent1', agentName: 'John Doe', amount: 50000, currency: 'NGN', status: 'confirmed', proofOfPayment: '#', createdAt: new Date('2023-10-01')},
-    { id: 'dep2', userId: mockUsers[0].id, agentId: 'agent3', agentName: 'Mike Ross', amount: 200, currency: 'USD', status: 'pending', proofOfPayment: '#', createdAt: new Date('2023-10-05')},
-    { id: 'dep3', userId: mockUsers[1].id, agentId: 'agent1', agentName: 'John Doe', amount: 10000, currency: 'NGN', status: 'failed', proofOfPayment: '#', createdAt: new Date('2023-09-20')},
-  ];
-
-export const withdrawals: Withdrawal[] = [
-    { id: 'wd1', userId: mockUsers[0].id, amount: 25000, currency: 'NGN', userBankInfo: { bankName: 'UBA', accountName: 'User One', accountNumber: '1234567890'}, status: 'approved', requestedAt: new Date('2023-09-28') },
-    { id: 'wd2', userId: mockUsers[0].id, amount: 100, currency: 'USD', userBankInfo: { bankName: 'Wells Fargo', accountName: 'User One', accountNumber: '0987654321'}, status: 'pending', requestedAt: new Date('2023-10-02') },
-    { id: 'wd3', userId: mockUsers[1].id, amount: 5000, currency: 'NGN', userBankInfo: { bankName: 'Access Bank', accountName: 'User Two', accountNumber: '1122334455'}, status: 'rejected', requestedAt: new Date('2023-09-15') },
-];
-
 export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user, index) => ({
   id: `sub${index + 1}`,
   user: {
