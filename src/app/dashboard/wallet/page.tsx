@@ -27,7 +27,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockAgents } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import React, { useState, useMemo } from 'react';
@@ -73,10 +72,14 @@ export default function WalletPage() {
 
   const [loading, setLoading] = useState(false);
 
-  const countries = [...new Set(mockAgents.map((agent) => agent.country))];
-  const filteredAgents = mockAgents.filter(
+  // Fetch agents from Firestore
+  const agentsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'agents') : null, [firestore]);
+  const { data: agents, isLoading: agentsLoading } = useCollection<Agent>(agentsQuery);
+
+  const countries = useMemo(() => agents ? [...new Set(agents.map((agent) => agent.country))] : [], [agents]);
+  const filteredAgents = useMemo(() => agents?.filter(
     (agent) => agent.country === selectedCountry
-  );
+  ) || [], [agents, selectedCountry]);
 
   const maxWithdrawalAmount = user ? (user.level || 1) * 100 : 0;
 
@@ -136,6 +139,12 @@ export default function WalletPage() {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copied to clipboard!' });
   };
+  
+  const getCurrencyForCountry = (country: string) => {
+    if (country === 'Nigeria') return 'NGN';
+    if (country === 'Ethiopia') return 'ETB';
+    return 'USD';
+  };
 
   const handleDepositSubmit = () => {
     if (!user || !firestore || !selectedAgent || !depositAmount) {
@@ -164,7 +173,7 @@ export default function WalletPage() {
       agentId: selectedAgent.id,
       agentName: selectedAgent.name,
       amount: amount,
-      currency: selectedAgent.country === 'Nigeria' ? 'NGN' : 'USD', // Simple currency logic
+      currency: getCurrencyForCountry(selectedAgent.country),
       status: 'pending',
       proofOfPayment: 'https://example.com/placeholder-proof.png', // Placeholder proof
       createdAt: serverTimestamp(),
@@ -335,9 +344,10 @@ export default function WalletPage() {
                     setSelectedAgent(null);
                   }}
                   value={selectedCountry}
+                  disabled={agentsLoading}
                 >
                   <SelectTrigger id="country">
-                    <SelectValue placeholder="Select a country" />
+                    <SelectValue placeholder={agentsLoading ? "Loading countries..." : "Select a country"} />
                   </SelectTrigger>
                   <SelectContent>
                     {countries.map((country) => (
@@ -408,7 +418,7 @@ export default function WalletPage() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="deposit-amount">Amount</Label>
+                      <Label htmlFor="deposit-amount">Amount ({getCurrencyForCountry(selectedAgent.country)})</Label>
                       <Input
                         id="deposit-amount"
                         type="number"

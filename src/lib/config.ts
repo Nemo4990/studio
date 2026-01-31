@@ -8,6 +8,7 @@ import {
   SendToBack,
   Settings,
   ArrowUpFromDot,
+  Briefcase,
 } from 'lucide-react';
 import type { NavItem } from './types';
 import { taskSubmissions, allDeposits, allWithdrawals } from './data';
@@ -77,6 +78,12 @@ export const adminNavItems: NavItem[] = [
     icon: ArrowUpFromDot,
     role: 'admin',
     badge: pendingWithdrawals > 0 ? pendingWithdrawals : undefined,
+  },
+  {
+    href: '/dashboard/admin/agents',
+    label: 'Manage Agents',
+    icon: Briefcase,
+    role: 'admin',
   },
 ];
 

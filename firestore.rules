@@ -127,6 +127,16 @@ service cloud.firestore {
     }
 
     /**
+     * @description Stores payment agent information.
+     * @path /agents/{agentId}
+     * @allow Any authenticated user can read agents. Admins can manage them.
+     */
+    match /agents/{agentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    /**
      * @description Stores wallet information.
      * @path /wallets/{walletId}
      * @deny All operations are denied because the entity is missing an ownership field.

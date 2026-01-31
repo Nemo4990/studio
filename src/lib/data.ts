@@ -166,13 +166,6 @@ const generateUsers = (count: number): User[] => {
 
 export const mockUsers: User[] = generateUsers(25);
 
-export const mockAgents: Agent[] = [
-    { id: 'agent1', name: 'John Doe', country: 'Nigeria', bankName: 'GTBank', accountNumber: '0123456789' },
-    { id: 'agent2', name: 'Jane Smith', country: 'Nigeria', bankName: 'First Bank', accountNumber: '9876543210' },
-    { id: 'agent3', name: 'Mike Ross', country: 'USA', bankName: 'Bank of America', accountNumber: '1122334455' },
-    { id: 'agent4', name: 'Rachel Zane', country: 'USA', bankName: 'Chase', accountNumber: '5544332211' },
-];
-
 export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user, index) => {
     const task = userTasks[index % userTasks.length];
     return {
@@ -194,12 +187,11 @@ export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user
 
 export const allDeposits: Deposit[] = mockUsers.flatMap((user, index) => {
     const isNigeria = index % 2 === 0;
-    const agent = isNigeria ? mockAgents[index % 2] : mockAgents[index % 2 + 2];
     return {
         id: `dep_all_${index}_1`, 
         userId: user.id, 
-        agentId: agent.id,
-        agentName: agent.name,
+        agentId: `agent${index%4+1}`,
+        agentName: `Agent ${index%4+1}`,
         amount: isNigeria ? Math.random() * 100000 : Math.random() * 500, 
         currency: isNigeria ? 'NGN' : 'USD', 
         status: (['confirmed', 'pending', 'failed'] as const)[index % 3], 
