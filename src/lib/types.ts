@@ -9,6 +9,7 @@ export type User = {
   level: number;
   walletBalance: number;
   createdAt: Date;
+  lastDailyCheckin?: any;
 };
 
 export type Testimonial = {

@@ -27,6 +27,11 @@
         "walletBalance": {
           "type": "number",
           "description": "The current balance of the user's wallet."
+        },
+        "lastDailyCheckin": {
+          "type": "string",
+          "description": "Timestamp of the last daily check-in claim.",
+          "format": "date-time"
         }
       },
       "required": [

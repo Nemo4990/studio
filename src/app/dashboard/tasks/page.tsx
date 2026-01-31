@@ -15,15 +15,20 @@ import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { useFirestore } from '@/firebase/provider';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp, updateDoc, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
+import React from 'react';
+import { QuizDialog } from '@/components/dashboard/quiz-dialog';
+import type { Task } from '@/lib/types';
+
 
 export default function TasksPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isQuizOpen, setIsQuizOpen] = React.useState(false);
 
   const handleSubmit = (taskId: string, taskTitle: string, reward: number) => {
     if (!user || !firestore) {
@@ -38,8 +43,6 @@ export default function TasksPage() {
     const submissionsColRef = collection(firestore, 'submissions');
     const submissionDocRef = doc(submissionsColRef); // Create a reference with a new ID
 
-    // Note: The admin page expects a denormalized structure.
-    // We are including user and task details directly in the submission document.
     const submissionData = {
       id: submissionDocRef.id,
       userId: user.id,
@@ -53,7 +56,7 @@ export default function TasksPage() {
         email: user.email,
         avatarUrl: user.avatarUrl,
       },
-      proof: 'https://example.com/placeholder-proof.pdf', // Placeholder for now
+      proof: 'https://example.com/proof-of-quiz.pdf', // Placeholder for now
     };
 
     setDoc(submissionDocRef, submissionData)
@@ -64,17 +67,12 @@ export default function TasksPage() {
         });
       })
       .catch((serverError) => {
-        // Construct a detailed error for better debugging, especially for security rule issues.
         const permissionError = new FirestorePermissionError({
           path: submissionDocRef.path,
           operation: 'create',
           requestResourceData: submissionData,
         });
-
-        // Emit the detailed error for the global error listener to catch and display.
         errorEmitter.emit('permission-error', permissionError);
-
-        // Show a generic error toast to the user.
         toast({
           variant: 'destructive',
           title: 'Submission Failed',
@@ -83,12 +81,92 @@ export default function TasksPage() {
       });
   };
 
+  const handleDailyCheckin = (task: Task) => {
+    if (!user || !firestore) return;
+
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const lastCheckin = user.lastDailyCheckin as unknown as Timestamp;
+    if (lastCheckin && new Date().getTime() - lastCheckin.toDate().getTime() < twentyFourHours) {
+        toast({
+            title: 'Already Claimed',
+            description: 'You can claim your daily check-in reward once every 24 hours.',
+            variant: 'destructive'
+        });
+        return;
+    }
+
+    handleSubmit(task.id, task.title, task.reward);
+
+    const userRef = doc(firestore, 'users', user.id);
+    updateDoc(userRef, { lastDailyCheckin: serverTimestamp() }).catch(err => {
+      // This is a best-effort update. If it fails, the user can just submit again.
+      // The main submission is what matters for the reward.
+      console.error("Failed to update lastDailyCheckin timestamp:", err);
+    });
+  }
+
+  const getTaskAction = (task: Task) => {
+    switch (task.status) {
+      case 'completed':
+        return (
+          <Button className="w-full" variant="outline" disabled>
+            Completed
+          </Button>
+        );
+      case 'locked':
+        return (
+          <Button className="w-full" disabled>
+            Locked
+          </Button>
+        );
+      case 'available':
+        if (task.id === '1') { // Daily Check-in
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+            const lastCheckin = user?.lastDailyCheckin as unknown as Timestamp;
+            const isDisabled = lastCheckin && new Date().getTime() - lastCheckin.toDate().getTime() < twentyFourHours;
+            
+            return (
+                <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={isDisabled}>
+                {isDisabled ? 'Claimed Today' : 'Claim Reward'}
+                </Button>
+            );
+        }
+        if (task.id === '2') { // Crypto Beginner's Quiz
+            return (
+                <Button className="w-full" onClick={() => setIsQuizOpen(true)}>
+                    Take Quiz
+                </Button>
+            );
+        }
+        return (
+          <Button
+            className="w-full"
+            onClick={() => handleSubmit(task.id, task.title, task.reward)}
+          >
+            Submit Task
+          </Button>
+        );
+      default:
+        return null;
+    }
+  };
+  
+  const quizTask = userTasks.find(t => t.id === '2');
+
   return (
     <>
       <PageHeader
         title="Tasks"
         description="Complete tasks to earn crypto rewards and level up."
       />
+
+      {quizTask && <QuizDialog 
+        isOpen={isQuizOpen} 
+        onClose={() => setIsQuizOpen(false)} 
+        onSubmitSuccess={() => {
+            handleSubmit(quizTask.id, quizTask.title, quizTask.reward);
+        }}
+      />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {userTasks.map((task) => (
@@ -125,24 +203,7 @@ export default function TasksPage() {
               </p>
             </CardContent>
             <CardFooter>
-              {task.status === 'available' && (
-                <Button
-                  className="w-full"
-                  onClick={() => handleSubmit(task.id, task.title, task.reward)}
-                >
-                  Submit Task
-                </Button>
-              )}
-              {task.status === 'locked' && (
-                <Button className="w-full" disabled>
-                  Locked
-                </Button>
-              )}
-              {task.status === 'completed' && (
-                <Button className="w-full" variant="outline" disabled>
-                  Completed
-                </Button>
-              )}
+                {getTaskAction(task)}
             </CardFooter>
           </Card>
         ))}
