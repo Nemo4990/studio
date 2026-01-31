@@ -22,7 +22,7 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import React from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task } from '@/lib/types';
-
+import Link from 'next/link';
 
 export default function TasksPage() {
   const { user } = useUser();
@@ -135,6 +135,13 @@ export default function TasksPage() {
             return (
                 <Button className="w-full" onClick={() => setIsQuizOpen(true)}>
                     Take Quiz
+                </Button>
+            );
+        }
+        if (task.id === '11') { // Speedmath Challenge
+            return (
+                <Button className="w-full" asChild>
+                    <Link href="/dashboard/tasks/speedmath">Start Challenge</Link>
                 </Button>
             );
         }
