@@ -8,13 +8,20 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import type { User } from "@/lib/types";
-import { collection } from "firebase/firestore";
+import { collection, Timestamp } from "firebase/firestore";
 import { MoreHorizontal } from "lucide-react";
 
 export default function AdminUsersPage() {
     const firestore = useFirestore();
     const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
     const { data: users, loading } = useCollection<User>(usersQuery);
+
+    const toDate = (date: any): Date => {
+        if (date instanceof Timestamp) {
+            return date.toDate();
+        }
+        return new Date(date);
+    }
 
     return (
         <>
@@ -61,7 +68,7 @@ export default function AdminUsersPage() {
                                     </TableCell>
                                     <TableCell>Level {user.level}</TableCell>
                                     <TableCell>${user.walletBalance.toFixed(2)}</TableCell>
-                                    <TableCell>{user.createdAt.toLocaleDateString()}</TableCell>
+                                    <TableCell>{toDate(user.createdAt).toLocaleDateString()}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
