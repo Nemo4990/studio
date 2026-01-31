@@ -2,7 +2,7 @@
   "entities": {
     "UserProfile": {
       "title": "User Profile",
-      "description": "Represents a user's profile information.",
+      "description": "Represents a user's complete profile information, used for both authentication and database records.",
       "type": "object",
       "properties": {
         "name": {

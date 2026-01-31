@@ -17,6 +17,8 @@ import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export function SignupForm() {
   const [name, setName] = useState('');
@@ -35,7 +37,7 @@ export function SignupForm() {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      await setDoc(doc(firestore, 'users', user.uid), {
+      const userProfileData = {
         id: user.uid,
         name,
         email,
@@ -44,7 +46,19 @@ export function SignupForm() {
         walletBalance: 0,
         createdAt: serverTimestamp(),
         avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
-      });
+      };
+      
+      const userDocRef = doc(firestore, 'users', user.uid);
+
+      setDoc(userDocRef, userProfileData)
+        .catch((serverError) => {
+          const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'create',
+            requestResourceData: userProfileData,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
 
       toast({
         title: 'Account Created',
