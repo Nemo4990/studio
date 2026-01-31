@@ -1,3 +1,5 @@
+'use client';
+
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,12 +13,38 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import type { User } from '@/lib/types';
 import Link from 'next/link';
+import { getAuth, signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+
 
 type AppHeaderProps = {
   user: User;
 };
 
 export default function AppHeader({ user }: AppHeaderProps) {
+  const auth = getAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+      router.push('/');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Logout Failed',
+        description: error.message,
+      });
+    }
+  };
+
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
       <SidebarTrigger className="md:hidden" />
@@ -43,8 +71,8 @@ export default function AppHeader({ user }: AppHeaderProps) {
           <DropdownMenuItem>Settings</DropdownMenuItem>
           <DropdownMenuItem>Support</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/">Logout</Link>
+          <DropdownMenuItem onClick={handleLogout}>
+            Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

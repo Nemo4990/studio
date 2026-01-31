@@ -1,3 +1,4 @@
+'use client';
 import PageHeader from "@/components/dashboard/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -5,13 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { mockUsers } from "@/lib/data";
+import { useCollection } from "@/firebase/firestore/use-collection";
+import type { User } from "@/lib/types";
+import { collection, getFirestore } from "firebase/firestore";
 import { MoreHorizontal } from "lucide-react";
+import { useMemo } from "react";
+import { useMemoFirebase } from "@/hooks/use-memo-firebase";
+import { getFirebase } from "@/firebase";
 
 export default function AdminUsersPage() {
+    const { firestore } = getFirebase();
+    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const { data: users, loading } = useCollection<User>(usersQuery);
+
     return (
         <>
-            <PageHeader title="Manage Users" description={`A list of all users on the platform (${mockUsers.length} total).`} />
+            <PageHeader title="Manage Users" description={`A list of all users on the platform (${users?.length || 0} total).`} />
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">All Users</CardTitle>
@@ -30,7 +40,12 @@ export default function AdminUsersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {mockUsers.map(user => (
+                            {loading && Array.from({ length: 5 }).map((_, i) => (
+                                <TableRow key={i}>
+                                    <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                                </TableRow>
+                            ))}
+                            {!loading && users?.map(user => (
                                 <TableRow key={user.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">

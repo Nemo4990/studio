@@ -6,7 +6,6 @@ import {
   ListTodo,
   ArrowDownToDot,
   SendToBack,
-  LogOut,
   Settings,
   ArrowUpFromDot,
 } from 'lucide-react';
@@ -86,12 +85,6 @@ export const bottomNavItems: NavItem[] = [
     href: '#',
     label: 'Settings',
     icon: Settings,
-    role: 'user',
-  },
-  {
-    href: '/',
-    label: 'Logout',
-    icon: LogOut,
     role: 'user',
   },
 ];

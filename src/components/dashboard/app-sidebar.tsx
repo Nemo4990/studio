@@ -12,9 +12,12 @@ import { LogoWithText } from '../logo';
 import { adminNavItems, bottomNavItems, userNavItems } from '@/lib/config';
 import type { User } from '@/lib/types';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
+import { getAuth, signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { LogOut } from 'lucide-react';
 
 type AppSidebarProps = {
   user: User;
@@ -22,7 +25,27 @@ type AppSidebarProps = {
 
 export default function AppSidebar({ user }: AppSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+  const auth = getAuth();
   const navItems = user.role === 'admin' ? adminNavItems : userNavItems;
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast({
+        title: 'Logged Out',
+        description: 'You have been successfully logged out.',
+      });
+      router.push('/');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Logout Failed',
+        description: error.message,
+      });
+    }
+  };
 
   return (
     <Sidebar>
@@ -62,6 +85,12 @@ export default function AppSidebar({ user }: AppSidebarProps) {
                 </SidebarMenuButton>
            </SidebarMenuItem>
           ))}
+           <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                    <LogOut className="size-4" />
+                    <span>Logout</span>
+                </SidebarMenuButton>
+           </SidebarMenuItem>
           <SidebarMenuItem>
             <div className="flex items-center gap-2 p-2">
                 <Avatar className="h-8 w-8">

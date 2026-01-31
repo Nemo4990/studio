@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      // Users can create, read, and update their own profile
+      allow get, update: if request.auth.uid == userId;
+      allow create: if request.auth.uid == userId && request.resource.data.role == 'user';
+      
+      // Admins can read, write, and delete any user profile
+      allow list, get, create, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}

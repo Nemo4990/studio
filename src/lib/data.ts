@@ -109,29 +109,6 @@ const generateUsers = (count: number): User[] => {
 
 export const mockUsers: User[] = generateUsers(25);
 
-
-export const mockUser: User = {
-  id: 'user123',
-  name: 'John Doe',
-  email: 'john.doe@email.com',
-  avatarUrl: findImage('user_avatar'),
-  role: 'user',
-  level: 1,
-  walletBalance: 250.75,
-  createdAt: new Date(),
-};
-
-export const mockAdmin: User = {
-  id: 'admin123',
-  name: 'Admin',
-  email: 'admin@taskverse.io',
-  avatarUrl: findImage('admin_avatar'),
-  role: 'admin',
-  level: 99,
-  walletBalance: 0,
-  createdAt: new Date(),
-};
-
 export const deposits: Deposit[] = [
   { id: 'dep1', amount: 0.05, currency: 'ETH', status: 'confirmed', timestamp: new Date('2023-10-01'), txHash: '0xabc...' },
   { id: 'dep2', amount: 100, currency: 'USDT', status: 'pending', timestamp: new Date('2023-10-05'), txHash: '0xdef...' },
