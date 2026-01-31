@@ -77,7 +77,7 @@ export default function WalletPage() {
     (agent) => agent.country === selectedCountry
   );
 
-  const maxWithdrawalAmount = user ? user.level * 100 : 0;
+  const maxWithdrawalAmount = user ? (user.level || 1) * 100 : 0;
 
   const depositsQuery = useMemoFirebase(
     () =>
@@ -229,13 +229,13 @@ export default function WalletPage() {
       return;
     }
 
-    if (amount > user.walletBalance) {
+    if (amount > (user.walletBalance || 0)) {
       toast({
         variant: 'destructive',
         title: 'Insufficient Balance',
-        description: `Your wallet balance is only $${user.walletBalance.toFixed(
-          2
-        )}.`,
+        description: `Your wallet balance is only $${(
+          user.walletBalance || 0
+        ).toFixed(2)}.`,
       });
       setLoading(false);
       return;
@@ -450,7 +450,7 @@ export default function WalletPage() {
                       Available Balance
                     </p>
                     <p className="text-lg font-bold">
-                      ${user.walletBalance.toFixed(2)}
+                      ${(user.walletBalance || 0).toFixed(2)}
                     </p>
                   </div>
                   <div className="text-right">
