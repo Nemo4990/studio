@@ -17,8 +17,6 @@ import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 
 export function SignupForm() {
   const [name, setName] = useState('');
@@ -41,7 +39,7 @@ export function SignupForm() {
         id: user.uid,
         name,
         email,
-        role: 'admin',
+        role: email === 'admin@taskverse.io' ? 'admin' : 'user',
         level: 1,
         walletBalance: 0,
         createdAt: serverTimestamp(),

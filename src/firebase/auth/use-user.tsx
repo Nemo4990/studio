@@ -62,7 +62,7 @@ export function useUser(): UseUserReturn {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
           email: firebaseUser.email,
-          role: 'admin',
+          role: firebaseUser.email === 'admin@taskverse.io' ? 'admin' : 'user',
           level: 1,
           walletBalance: 0,
           createdAt: serverTimestamp(),
