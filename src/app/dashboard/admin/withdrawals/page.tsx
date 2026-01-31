@@ -1,16 +1,86 @@
+'use client';
 import PageHeader from "@/components/dashboard/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { allWithdrawals, mockUsers } from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { collection, doc, updateDoc } from "firebase/firestore";
+import type { Withdrawal, User } from "@/lib/types";
+import { useToast } from "@/hooks/use-toast";
+import React from "react";
+import { Timestamp } from "firebase/firestore";
 
 export default function AdminWithdrawalsPage() {
+    const { user: adminUser, loading: userLoading } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
+    // 1. Fetch all withdrawals
+    const withdrawalsQuery = useMemoFirebase(
+        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'withdrawals') : null,
+        [firestore, adminUser]
+    );
+    const { data: withdrawals, isLoading: withdrawalsLoading } = useCollection<Withdrawal>(withdrawalsQuery);
+
+    // 2. Fetch all users
+    const usersQuery = useMemoFirebase(
+        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'users') : null,
+        [firestore, adminUser]
+    );
+    const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
+
+    const usersMap = React.useMemo(() => {
+        if (!users) return new Map();
+        return new Map(users.map(user => [user.id, user]));
+    }, [users]);
     
-    const getUserById = (id: string) => mockUsers.find(u => u.id === id);
+    const getUserById = (id: string) => usersMap.get(id);
+
+    const handleStatusChange = async (withdrawalId: string, newStatus: 'approved' | 'rejected') => {
+        if (!firestore) return;
+        
+        const withdrawalRef = doc(firestore, 'withdrawals', withdrawalId);
+        try {
+            await updateDoc(withdrawalRef, { status: newStatus });
+            toast({
+                title: `Withdrawal ${newStatus}`,
+                description: `The withdrawal status has been updated.`,
+                variant: newStatus === 'rejected' ? 'destructive' : 'default',
+            });
+            // Note: Balance is NOT automatically deducted here. This is a complex transaction
+            // that should be handled carefully, likely on a backend.
+        } catch (e) {
+            console.error(e);
+            toast({
+                title: 'Update failed',
+                description: 'Could not update withdrawal status.',
+                variant: 'destructive',
+            });
+        }
+    };
+    
+    const isLoading = userLoading || withdrawalsLoading || usersLoading;
+
+    if (isLoading) {
+        return (
+            <>
+                <PageHeader title="Withdrawals" description="Review and approve or reject user withdrawal requests." />
+                <Card>
+                    <CardContent className="pt-6 text-center text-muted-foreground">
+                        Loading withdrawals...
+                    </CardContent>
+                </Card>
+            </>
+        )
+    }
+    
+    if (adminUser?.role !== 'admin') {
+         return <PageHeader title="Unauthorized" description="You do not have permission to view this page." />
+    }
 
     return (
         <>
@@ -29,12 +99,12 @@ export default function AdminWithdrawalsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {allWithdrawals.map(withdrawal => {
-                                const user = getUserById(withdrawal.userId!);
+                            {withdrawals && withdrawals.map(withdrawal => {
+                                const user = getUserById(withdrawal.userId);
                                 return (
                                     <TableRow key={withdrawal.id}>
                                         <TableCell>
-                                            {user && (
+                                            {user ? (
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-8 w-8">
                                                         <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -42,6 +112,8 @@ export default function AdminWithdrawalsPage() {
                                                     </Avatar>
                                                     <div>{user.name}</div>
                                                 </div>
+                                            ) : (
+                                                <div>{withdrawal.userId}</div>
                                             )}
                                         </TableCell>
                                         <TableCell>{withdrawal.amount.toLocaleString()} {withdrawal.currency}</TableCell>
@@ -52,12 +124,12 @@ export default function AdminWithdrawalsPage() {
                                         <TableCell>
                                             <Badge variant={withdrawal.status === 'approved' ? 'default' : withdrawal.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(withdrawal.status === 'approved' && 'bg-green-500/80')}>{withdrawal.status}</Badge>
                                         </TableCell>
-                                        <TableCell>{withdrawal.requestedAt.toLocaleDateString()}</TableCell>
+                                        <TableCell>{(withdrawal.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
                                         <TableCell>
                                             {withdrawal.status === 'pending' && (
                                                 <div className="flex gap-2">
-                                                    <Button size="sm" variant="outline"><Check className="size-4 mr-2" />Approve</Button>
-                                                    <Button size="sm" variant="destructive-outline"><X className="size-4 mr-2" />Reject</Button>
+                                                    <Button size="sm" variant="outline" onClick={() => handleStatusChange(withdrawal.id, 'approved')}><Check className="size-4 mr-2" />Approve</Button>
+                                                    <Button size="sm" variant="destructive-outline" onClick={() => handleStatusChange(withdrawal.id, 'rejected')}><X className="size-4 mr-2" />Reject</Button>
                                                 </div>
                                             )}
                                         </TableCell>

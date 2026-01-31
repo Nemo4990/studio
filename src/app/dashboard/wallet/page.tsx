@@ -49,6 +49,7 @@ import {
   query,
   orderBy,
   Timestamp,
+  where,
 } from 'firebase/firestore';
 
 type Transaction = (
@@ -83,7 +84,8 @@ export default function WalletPage() {
     () =>
       user && firestore
         ? query(
-            collection(firestore, `users/${user.id}/deposits`),
+            collection(firestore, 'deposits'),
+            where('userId', '==', user.id),
             orderBy('createdAt', 'desc')
           )
         : null,
@@ -96,7 +98,8 @@ export default function WalletPage() {
     () =>
       user && firestore
         ? query(
-            collection(firestore, `users/${user.id}/withdrawals`),
+            collection(firestore, 'withdrawals'),
+            where('userId', '==', user.id),
             orderBy('requestedAt', 'desc')
           )
         : null,
@@ -167,7 +170,7 @@ export default function WalletPage() {
       createdAt: serverTimestamp(),
     };
 
-    const depositsRef = collection(firestore, `users/${user.id}/deposits`);
+    const depositsRef = collection(firestore, `deposits`);
 
     addDoc(depositsRef, depositData)
       .then(() => {
@@ -268,7 +271,7 @@ export default function WalletPage() {
 
     const withdrawalsRef = collection(
       firestore,
-      `users/${user.id}/withdrawals`
+      `withdrawals`
     );
 
     addDoc(withdrawalsRef, withdrawalData)

@@ -37,7 +37,7 @@ export type Agent = {
 
 export type Deposit = {
   id: string;
-  userId?: string;
+  userId: string;
   agentId: string;
   agentName: string; // denormalized
   amount: number;
@@ -56,7 +56,7 @@ export type UserBankInfo = {
 
 export type Withdrawal = {
   id:string;
-  userId?: string;
+  userId: string;
   amount: number;
   currency: string;
   userBankInfo: UserBankInfo;
