@@ -1,71 +1,68 @@
 'use client';
 
+import { useFirebase } from '../provider'; // Use the main provider hook
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, type User as FirebaseAuthUser } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useAuth, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { User } from '@/lib/types';
-
 
 interface UseUserReturn {
   user: User | null;
-  firebaseUser: FirebaseAuthUser | null;
   loading: boolean;
   error: Error | null;
 }
 
 export function useUser(): UseUserReturn {
-  const auth = useAuth();
+  // 1. Get the basic Firebase Auth user and loading state from the provider
+  const { user: firebaseUser, isUserLoading: isAuthLoading, userError: authError } = useFirebase();
   const firestore = useFirestore();
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseAuthUser | null>(null);
+
+  // 2. State for the rich user profile from Firestore
   const [profile, setProfile] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [isProfileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      if (!user) {
-        setLoading(false);
-        setProfile(null);
-      }
-    }, (err) => {
-        setError(err);
-        setLoading(false);
-    });
-
-    return () => unsubscribeAuth();
-  }, [auth]);
-
+  // 3. Memoize the document reference
   const userDocRef = useMemoFirebase(
     () => (firestore && firebaseUser ? doc(firestore, 'users', firebaseUser.uid) : null),
     [firestore, firebaseUser]
   );
   
+  // 4. Effect to listen to the user's profile document in Firestore
   useEffect(() => {
-    if (!userDocRef || !firebaseUser) {
+    // If we have no authenticated user from the provider, we're done.
+    if (!firebaseUser) {
+      setProfile(null);
+      // isAuthLoading will be false here if the auth state has been determined as "logged out"
+      setProfileLoading(false);
       return;
     }
 
-    setLoading(true);
+    // If we don't have the doc ref yet, wait.
+    if (!userDocRef) {
+        return;
+    }
+
+    setProfileLoading(true);
     const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const userProfile: User = {
             id: docSnap.id,
             ...data,
-            // Convert Firestore Timestamps to JS Dates
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
         } as User;
         setProfile(userProfile);
-        setLoading(false);
+        setProfileError(null);
+        setProfileLoading(false);
       } else {
-        // User is authenticated, but no profile exists. Let's create one.
+        // This is a critical state: authenticated user, but no profile doc.
+        // This can happen on first sign-up. We'll create the document.
         const userProfileData = {
           id: firebaseUser.uid,
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
           email: firebaseUser.email,
-          role: 'admin',
+          role: 'admin', // Default new users to admin as per previous requests
           level: 1,
           walletBalance: 0,
           createdAt: serverTimestamp(),
@@ -74,8 +71,8 @@ export function useUser(): UseUserReturn {
 
         try {
             await setDoc(userDocRef, userProfileData);
-            // The snapshot listener will be re-triggered by this setDoc, 
-            // which will then set the profile and loading state correctly.
+            // The onSnapshot listener will then pick up the newly created document,
+            // update the 'profile' state, and set loading to false.
         } catch(serverError) {
             const permissionError = new FirestorePermissionError({
               path: userDocRef.path,
@@ -83,17 +80,29 @@ export function useUser(): UseUserReturn {
               requestResourceData: userProfileData,
             });
             errorEmitter.emit('permission-error', permissionError);
-            setError(permissionError);
-            setLoading(false);
+            setProfileError(permissionError);
+            setProfileLoading(false);
         }
       }
     }, (err) => {
-        setError(err);
-        setLoading(false);
+        // Handle errors from the onSnapshot listener itself (e.g., permissions)
+        const permissionError = new FirestorePermissionError({
+          path: userDocRef.path,
+          operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setProfileError(permissionError);
+        setProfile(null);
+        setProfileLoading(false);
     });
 
     return () => unsubscribeSnapshot();
-  }, [userDocRef, firebaseUser]);
+  }, [userDocRef, firebaseUser]); // This effect depends on the doc ref changing
 
-  return { user: profile, firebaseUser, loading, error };
+  // 5. Combine loading states and errors
+  return { 
+    user: profile, 
+    loading: isAuthLoading || isProfileLoading, 
+    error: authError || profileError 
+  };
 }
