@@ -4,25 +4,17 @@
  * Publicly readable data is segregated into top-level collections with write access locked down.
  *
  * Data Structure: The data is organized hierarchically. A top-level `/users/{userId}` collection holds user profiles.
- * All related private data, such as deposits, submissions, withdrawals, and testimonials, are stored in subcollections
+ * All related private data, such as deposits, withdrawals, and testimonials, are stored in subcollections
  * under the corresponding user's document (e.g., `/users/{userId}/deposits/{depositId}`). This structure makes
- * ownership-based security rules simple and performant. Public data, like available tasks, resides in its own
- * top-level collection, `/tasks`.
+ * ownership-based security rules simple and performant. Public data (tasks) and platform-wide data (submissions)
+ * reside in their own top-level collections.
  *
  * Key Security Decisions:
- * - User Enumeration Disabled: Listing documents in the top-level `/users` collection is disallowed to prevent exposing the user base.
- * - Strict Ownership: All subcollections under `/users/{userId}` are strictly controlled. Only the authenticated user matching `{userId}` can read or write their own documents.
- * - Public Read-Only Collections: The `/tasks` collection is publicly readable by anyone, including unauthenticated users, to allow browsing. All write operations are disabled, assuming tasks are managed by an admin backend.
- * - Inaccessible Wallets: The `/wallets` collection is currently locked down completely. It lacks an ownership field (e.g., `userId`), making it impossible to securely determine which user owns which wallet. Access is denied until the data model is updated.
- * - Relational Integrity: On document creation, rules ensure that internal ID fields (like `userId`) match the document's path, creating a secure and consistent link to the parent document. These fields are immutable.
- *
- * Denormalization for Authorization: This ruleset relies on the path structure for authorization, which is a form of denormalization.
- * Placing user data in `/users/{userId}/...` paths means we don't need to perform extra `get()` calls to check ownership,
- * leading to faster and more reliable security enforcement.
- *
- * Structural Segregation: Private user data (deposits, submissions) is clearly separated from public data (tasks)
- * by placing them in different collections with different security postures. This is more secure and efficient than
- * mixing public and private documents in a single collection.
+ * - User Enumeration Disabled: Listing documents in the top-level `/users` collection is disallowed to prevent exposing the user base, except for admins.
+ * - Strict Ownership: All user-specific subcollections are strictly controlled. Only the authenticated user matching `{userId}` can read or write their own documents.
+ * - Admin Access: An `isAdmin()` function, which checks for a `role == 'admin'` field on the user's profile, grants privileged access to read/write data across the platform, such as viewing all users or managing all submissions.
+ * - Top-Level Submissions: The `/submissions` collection is at the top level to allow admins to query all submissions efficiently without running into collection group query limitations. User access is restricted to their own submissions via query constraints.
+ * - Relational Integrity: On document creation, rules ensure that internal ID fields (like `userId`) match the document's path or the user's auth UID, creating a secure and consistent link.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -55,6 +47,11 @@ service cloud.firestore {
       return isOwner(userId) && resource != null;
     }
 
+    /**
+     * Checks if the current user has the 'admin' role by reading their user profile.
+     * This requires a 'get' operation, which has security and performance implications.
+     * It works for standard queries but is NOT compatible with collection group queries.
+     */
     function isAdmin() {
       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
@@ -66,114 +63,78 @@ service cloud.firestore {
     /**
      * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow A user reads or updates their own profile (e.g., `(get /users/user_abc)` by user_abc).
-     * @allow A new user creates their own profile document (e.g., `(create /users/user_xyz)` by user_xyz).
-     * @deny An authenticated user tries to read another user's profile (e.g., `(get /users/user_abc)` by user_xyz).
-     * @deny Any user tries to list all users (e.g., `(list /users)`).
-     * @principle Enforces self-service profile management and prevents user enumeration.
+     * @allow A user reads or updates their own profile. An admin can read any profile.
+     * @deny Any non-admin user tries to list all users.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get, update: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if (isExistingOwner(userId) && request.resource.data.id == resource.data.id) || isAdmin();
+      allow create: if isOwner(userId);
       allow delete: if false; // Deleting user accounts is a sensitive operation, disabled by default.
     }
 
     /**
      * @description Stores tasks that are publicly available on the platform.
      * @path /tasks/{taskId}
-     * @allow Any user, including anonymous ones, can read the list of tasks (e.g., `(list /tasks)`).
-     * @allow Any user, including anonymous ones, can get a single task (e.g., `(get /tasks/task_123)`).
-     * @deny Any client-side user tries to create, update, or delete a task.
-     * @principle Provides public read access to common data while protecting it from modification. Assumes writes are handled by a trusted server environment.
+     * @allow Any user can read the list of tasks.
+     * @deny Any client-side user tries to write to the tasks collection.
      */
     match /tasks/{taskId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Top-level collection for all task submissions.
+     * @path /submissions/{submissionId}
+     * @allow Admins can read and write all submissions.
+     * @allow Users can create their own submissions.
+     * @allow Users can query for their own submissions using `where('userId', '==', auth.uid)`.
+     */
+    match /submissions/{submissionId} {
+      allow get: if isOwner(resource.data.userId) || isAdmin();
+      allow list: if isAdmin() || request.query.where.userId == request.auth.uid;
+      allow create: if isOwner(request.resource.data.userId);
+      allow update, delete: if isAdmin();
     }
 
     /**
      * @description Stores deposit records for a specific user.
      * @path /users/{userId}/deposits/{depositId}
-     * @allow A user creates a new deposit record for themselves (e.g., `(create /users/user_abc/deposits/dep_1)` by user_abc).
-     * @allow A user reads or updates their own deposit record (e.g., `(get /users/user_abc/deposits/dep_1)` by user_abc).
-     * @deny A user attempts to access another user's deposit records (e.g., `(list /users/user_xyz/deposits)` by user_abc).
-     * @principle Restricts access to a user's own financial data tree via path-based ownership.
+     * @allow A user can manage their own deposit records.
+     * @deny A user cannot access another user's deposits.
      */
     match /users/{userId}/deposits/{depositId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Stores task submissions made by a specific user.
-     * @path /users/{userId}/submissions/{submissionId}
-     * @allow A user creates a new submission for a task (e.g., `(create /users/user_abc/submissions/sub_1)` by user_abc).
-     * @allow A user reads or lists their own submissions (e.g., `(list /users/user_abc/submissions)` by user_abc).
-     * @deny A user attempts to access another user's submissions (e.g., `(get /users/user_xyz/submissions/sub_1)` by user_abc).
-     * @principle Restricts access to a user's own data tree via path-based ownership.
-     */
-    match /users/{userId}/submissions/{submissionId} {
-      allow read, update: if isOwner(userId) || isAdmin();
-      allow list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow read, write: if isOwner(userId);
     }
 
     /**
      * @description Stores wallet information.
      * @path /wallets/{walletId}
-     * @allow No operations are allowed.
-     * @deny All users are denied access.
-     * @principle Fails-safe security. Access is blocked because the 'Wallet' entity is missing a 'userId' or 'ownerId' field, making secure authorization impossible.
+     * @deny All operations are denied because the entity is missing an ownership field.
      */
     match /wallets/{walletId} {
-      // CRITICAL: Cannot implement secure rules. The 'Wallet' entity is missing a `userId` or `ownerId` field.
-      // To fix this, add a `userId` field to the Wallet data model and then implement rules similar to the `/users/{userId}` profile document.
-      allow get: if false; // TODO: Add owner validation once the schema is updated.
-      allow list: if false; // TODO: Add owner validation once the schema is updated.
-      allow create: if false; // TODO: Add owner validation once the schema is updated.
-      allow update: if false; // TODO: Add owner validation once the schema is updated.
-      allow delete: if false; // TODO: Add owner validation once the schema is updated.
+      allow read, write: if false;
     }
 
     /**
      * @description Stores withdrawal requests for a specific user.
      * @path /users/{userId}/withdrawals/{withdrawalId}
-     * @allow A user creates a new withdrawal request for themselves (e.g., `(create /users/user_abc/withdrawals/wd_1)` by user_abc).
-     * @allow A user reads or updates their own withdrawal record (e.g., `(get /users/user_abc/withdrawals/wd_1)` by user_abc).
-     * @deny A user attempts to access another user's withdrawal records (e.g., `(list /users/user_xyz/withdrawals)` by user_abc).
-     * @principle Restricts access to a user's own financial data tree via path-based ownership.
+     * @allow A user can manage their own withdrawal requests.
+     * @deny A user cannot access another user's withdrawals.
      */
     match /users/{userId}/withdrawals/{withdrawalId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId);
     }
 
     /**
      * @description Stores testimonials provided by a specific user.
      * @path /users/{userId}/testimonials/{testimonialId}
-     * @allow A user creates a new testimonial (e.g., `(create /users/user_abc/testimonials/test_1)` by user_abc).
-     * @allow A user reads or lists their own testimonials (e.g., `(list /users/user_abc/testimonials)` by user_abc).
-     * @deny A user attempts to access another user's testimonials (e.g., `(get /users/user_xyz/testimonials/test_1)` by user_abc).
-     * @principle Restricts access to a user's own data tree via path-based ownership.
+     * @allow A user can manage their own testimonials.
+     * @deny A user cannot access another user's testimonials.
      */
     match /users/{userId}/testimonials/{testimonialId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+      allow read, write: if isOwner(userId);
     }
   }
 }

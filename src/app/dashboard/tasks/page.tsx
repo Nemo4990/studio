@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles } from 'lucide-react';
 import { useUser } from '@/firebase';
 import { useFirestore } from '@/firebase/provider';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -35,9 +35,13 @@ export default function TasksPage() {
       return;
     }
 
+    const submissionsColRef = collection(firestore, 'submissions');
+    const submissionDocRef = doc(submissionsColRef); // Create a reference with a new ID
+
     // Note: The admin page expects a denormalized structure.
     // We are including user and task details directly in the submission document.
     const submissionData = {
+      id: submissionDocRef.id,
       userId: user.id,
       taskId,
       submittedAt: serverTimestamp(),
@@ -52,9 +56,7 @@ export default function TasksPage() {
       proof: 'https://example.com/placeholder-proof.pdf', // Placeholder for now
     };
 
-    const submissionsRef = collection(firestore, `users/${user.id}/submissions`);
-
-    addDoc(submissionsRef, submissionData)
+    setDoc(submissionDocRef, submissionData)
       .then(() => {
         toast({
           title: 'Task Submitted!',
@@ -64,7 +66,7 @@ export default function TasksPage() {
       .catch((serverError) => {
         // Construct a detailed error for better debugging, especially for security rule issues.
         const permissionError = new FirestorePermissionError({
-          path: submissionsRef.path,
+          path: submissionDocRef.path,
           operation: 'create',
           requestResourceData: submissionData,
         });

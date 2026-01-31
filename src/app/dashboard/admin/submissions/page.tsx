@@ -19,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TaskSubmission } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import {
-  collectionGroup,
+  collection,
   doc,
   runTransaction,
   Timestamp,
@@ -135,7 +135,7 @@ export default function AdminSubmissionsPage() {
   const submissionsQuery = useMemoFirebase(
     () =>
       firestore && adminUser?.role === 'admin'
-        ? collectionGroup(firestore, 'submissions')
+        ? collection(firestore, 'submissions')
         : null,
     [firestore, adminUser]
   );
@@ -148,8 +148,6 @@ export default function AdminSubmissionsPage() {
 
     const submissionRef = doc(
       firestore,
-      'users',
-      submission.userId,
       'submissions',
       submission.id
     );
@@ -185,8 +183,6 @@ export default function AdminSubmissionsPage() {
     if (!firestore) return;
     const submissionRef = doc(
       firestore,
-      'users',
-      submission.userId,
       'submissions',
       submission.id
     );

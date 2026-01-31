@@ -355,11 +355,11 @@
       },
       "description": "Collection of tasks available for users to complete, indexed by taskId."
     },
-    "/users/{userId}/submissions/{submissionId}": {
+    "/submissions/{submissionId}": {
       "schema": {
         "$ref": "#/entities/Submission"
       },
-      "description": "Submissions made by a specific user for a specific task. Includes denormalized fields from the associated Task (e.g., `requiredLevel`) for authorization independence."
+      "description": "Top-level collection of all task submissions from all users."
     },
     "/users/{userId}/deposits/{depositId}": {
       "schema": {
