@@ -13,15 +13,39 @@ import { MoreHorizontal } from "lucide-react";
 
 export default function AdminUsersPage() {
     const firestore = useFirestore();
-    const { user: currentUser } = useUser();
-    const usersQuery = useMemoFirebase(() => (firestore && currentUser?.role === 'admin') ? collection(firestore, 'users') : null, [firestore, currentUser]);
-    const { data: users, loading } = useCollection<User>(usersQuery);
+    const { user: currentUser, loading: userLoading } = useUser();
+    
+    // Query is only created when we know the user is an admin.
+    const usersQuery = useMemoFirebase(() => 
+        (firestore && currentUser?.role === 'admin') ? collection(firestore, 'users') : null, 
+        [firestore, currentUser]
+    );
+    const { data: users, loading: dataLoading } = useCollection<User>(usersQuery);
 
     const toDate = (date: any): Date => {
         if (date instanceof Timestamp) {
             return date.toDate();
         }
         return new Date(date);
+    }
+    
+    if (userLoading) {
+        return (
+             <>
+                <PageHeader title="Manage Users" description="Verifying permissions..." />
+                <Card>
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                        Loading...
+                    </CardContent>
+                </Card>
+            </>
+        )
+    }
+
+    if (currentUser?.role !== 'admin') {
+        return (
+            <PageHeader title="Unauthorized" description="You do not have permission to view this page." />
+        )
     }
 
     return (
@@ -45,12 +69,12 @@ export default function AdminUsersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loading && Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell colSpan={6} className="text-center">Loading...</TableCell>
+                            {dataLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">Loading users...</TableCell>
                                 </TableRow>
-                            ))}
-                            {!loading && users?.map(user => (
+                            )}
+                            {!dataLoading && users?.map(user => (
                                 <TableRow key={user.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-3">

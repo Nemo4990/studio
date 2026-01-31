@@ -142,8 +142,6 @@ export default function AdminSubmissionsPage() {
   const { data: submissions, isLoading: submissionsLoading } =
     useCollection<TaskSubmission>(submissionsQuery);
 
-  const isLoading = userLoading || submissionsLoading;
-    
   const handleApprove = async (submission: TaskSubmission) => {
     if (!firestore) return;
     toast({ title: 'Approving submission...' });
@@ -207,6 +205,19 @@ export default function AdminSubmissionsPage() {
     }
   };
 
+  if (userLoading) {
+    return (
+      <>
+        <PageHeader title="Task Submissions" description="Verifying permissions..." />
+        <p className="py-8 text-center text-muted-foreground">Loading...</p>
+      </>
+    )
+  }
+
+  if (adminUser?.role !== 'admin') {
+    return <PageHeader title="Unauthorized" description="You do not have permission to view this page." />
+  }
+
   const pending = submissions?.filter((s) => s.status === 'pending') || [];
   const approved = submissions?.filter((s) => s.status === 'approved') || [];
   const rejected = submissions?.filter((s) => s.status === 'rejected') || [];
@@ -231,7 +242,7 @@ export default function AdminSubmissionsPage() {
               submissions={pending}
               onApprove={handleApprove}
               onReject={handleReject}
-              loading={isLoading}
+              loading={submissionsLoading}
             />
           </TabsContent>
           <TabsContent value="approved">
@@ -239,7 +250,7 @@ export default function AdminSubmissionsPage() {
               submissions={approved}
               onApprove={handleApprove}
               onReject={handleReject}
-              loading={isLoading}
+              loading={submissionsLoading}
             />
           </TabsContent>
           <TabsContent value="rejected">
@@ -247,7 +258,7 @@ export default function AdminSubmissionsPage() {
               submissions={rejected}
               onApprove={handleApprove}
               onReject={handleReject}
-              loading={isLoading}
+              loading={submissionsLoading}
             />
           </TabsContent>
         </Card>
