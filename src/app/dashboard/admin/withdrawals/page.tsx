@@ -14,21 +14,21 @@ import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { Timestamp } from "firebase/firestore";
 
-function AdminWithdrawalsView() {
+function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
     // Fetch all withdrawals
     const withdrawalsQuery = useMemoFirebase(
-        () => firestore ? collection(firestore, 'withdrawals') : null,
-        [firestore]
+        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'withdrawals') : null,
+        [firestore, adminUser]
     );
     const { data: withdrawals, isLoading: withdrawalsLoading } = useCollection<Withdrawal>(withdrawalsQuery);
 
     // Fetch all users
     const usersQuery = useMemoFirebase(
-        () => firestore ? collection(firestore, 'users') : null,
-        [firestore]
+        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'users') : null,
+        [firestore, adminUser]
     );
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -154,7 +154,7 @@ export default function AdminWithdrawalsPage() {
     return (
         <>
             <PageHeader title="Withdrawals" description="Review and approve or reject user withdrawal requests." />
-            <AdminWithdrawalsView />
+            <AdminWithdrawalsView adminUser={adminUser} />
         </>
     )
 }

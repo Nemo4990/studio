@@ -15,21 +15,19 @@ import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { Timestamp } from "firebase/firestore";
 
-function AdminDepositsView() {
+function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // Fetch all deposits - safe to call now
     const depositsQuery = useMemoFirebase(
-        () => firestore ? collection(firestore, 'deposits') : null,
-        [firestore]
+        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'deposits') : null,
+        [firestore, adminUser]
     );
     const { data: deposits, isLoading: depositsLoading } = useCollection<Deposit>(depositsQuery);
 
-    // Fetch all users to map user details - safe to call now
     const usersQuery = useMemoFirebase(
-        () => firestore ? collection(firestore, 'users') : null,
-        [firestore]
+        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'users') : null,
+        [firestore, adminUser]
     );
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -161,7 +159,7 @@ export default function AdminDepositsPage() {
     return (
         <>
             <PageHeader title="Deposits" description="View and manage all user deposit transactions." />
-            <AdminDepositsView />
+            <AdminDepositsView adminUser={adminUser} />
         </>
     )
 }
