@@ -7,13 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useUser } from "@/firebase/auth/use-user";
 import type { User } from "@/lib/types";
 import { collection, Timestamp } from "firebase/firestore";
 import { MoreHorizontal } from "lucide-react";
 
 export default function AdminUsersPage() {
     const firestore = useFirestore();
-    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+    const { user: currentUser } = useUser();
+    const usersQuery = useMemoFirebase(() => (firestore && currentUser?.role === 'admin') ? collection(firestore, 'users') : null, [firestore, currentUser]);
     const { data: users, loading } = useCollection<User>(usersQuery);
 
     const toDate = (date: any): Date => {

@@ -28,6 +28,7 @@ import {
 } from 'firebase/firestore';
 import { Check, X } from 'lucide-react';
 import React from 'react';
+import { useUser } from '@/firebase/auth/use-user';
 
 type SubmissionTableProps = {
   submissions: TaskSubmission[];
@@ -131,11 +132,14 @@ function SubmissionTable({
 export default function AdminSubmissionsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { user: adminUser } = useUser();
 
   const submissionsQuery = useMemoFirebase(
     () =>
-      firestore ? collectionGroup(firestore, 'submissions') : null,
-    [firestore]
+      firestore && adminUser?.role === 'admin'
+        ? collectionGroup(firestore, 'submissions')
+        : null,
+    [firestore, adminUser]
   );
   const { data: submissions, isLoading } =
     useCollection<TaskSubmission>(submissionsQuery);
