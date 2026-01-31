@@ -50,15 +50,7 @@ export function SignupForm() {
       
       const userDocRef = doc(firestore, 'users', user.uid);
 
-      setDoc(userDocRef, userProfileData)
-        .catch((serverError) => {
-          const permissionError = new FirestorePermissionError({
-            path: userDocRef.path,
-            operation: 'create',
-            requestResourceData: userProfileData,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+      await setDoc(userDocRef, userProfileData);
 
       toast({
         title: 'Account Created',

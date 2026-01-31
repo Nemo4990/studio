@@ -48,7 +48,7 @@ export function useUser(): UseUserReturn {
     }
 
     setLoading(true);
-    const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+    const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         const userProfile: User = {
@@ -72,8 +72,11 @@ export function useUser(): UseUserReturn {
           avatarUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
         };
 
-        setDoc(userDocRef, userProfileData)
-          .catch((serverError) => {
+        try {
+            await setDoc(userDocRef, userProfileData);
+            // The snapshot listener will be re-triggered by this setDoc, 
+            // which will then set the profile and loading state correctly.
+        } catch(serverError) {
             const permissionError = new FirestorePermissionError({
               path: userDocRef.path,
               operation: 'create',
@@ -82,9 +85,7 @@ export function useUser(): UseUserReturn {
             errorEmitter.emit('permission-error', permissionError);
             setError(permissionError);
             setLoading(false);
-          });
-        // The snapshot listener will be re-triggered with the new document data,
-        // which will then set the profile and loading state correctly.
+        }
       }
     }, (err) => {
         setError(err);
