@@ -25,7 +25,7 @@ export default function TasksPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleSubmit = (taskId: string, taskTitle: string) => {
+  const handleSubmit = (taskId: string, taskTitle: string, reward: number) => {
     if (!user || !firestore) {
       toast({
         variant: 'destructive',
@@ -43,6 +43,7 @@ export default function TasksPage() {
       submittedAt: serverTimestamp(),
       status: 'pending',
       taskTitle,
+      reward,
       user: {
         name: user.name,
         email: user.email,
@@ -125,7 +126,7 @@ export default function TasksPage() {
               {task.status === 'available' && (
                 <Button
                   className="w-full"
-                  onClick={() => handleSubmit(task.id, task.title)}
+                  onClick={() => handleSubmit(task.id, task.title, task.reward)}
                 >
                   Submit Task
                 </Button>

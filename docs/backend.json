@@ -55,7 +55,7 @@
           "type": "string",
           "description": "Detailed description of the task."
         },
-        "rewardAmount": {
+        "reward": {
           "type": "number",
           "description": "The reward amount for completing the task."
         },
@@ -68,7 +68,7 @@
         "id",
         "name",
         "description",
-        "rewardAmount",
+        "reward",
         "requiredLevel"
       ]
     },
@@ -127,6 +127,10 @@
         "proof": {
           "type": "string",
           "description": "A URL or reference to the proof of task completion."
+        },
+        "reward": {
+          "type": "number",
+          "description": "The reward amount for the task at the time of submission."
         }
       },
       "required": [
@@ -137,7 +141,8 @@
         "status",
         "taskTitle",
         "user",
-        "proof"
+        "proof",
+        "reward"
       ]
     },
     "Deposit": {

@@ -75,9 +75,12 @@ export type NavItem = {
 
 export type TaskSubmission = {
   id: string;
+  userId: string;
+  taskId: string;
   user: Pick<User, 'name' | 'avatarUrl' | 'email'>;
   taskTitle: string;
-  submittedAt: Date;
+  submittedAt: any;
   status: 'pending' | 'approved' | 'rejected';
   proof: string;
+  reward: number;
 };
