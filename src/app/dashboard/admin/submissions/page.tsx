@@ -89,17 +89,3 @@ export default function AdminSubmissionsPage() {
         </>
     )
 }
-
-declare module "@/components/ui/button" {
-    interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-      variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link" | "destructive-outline";
-    }
-  }
-  
-  // This is a bit of a hack to add a new variant to the button component
-  // In a real app, you might want to extend the variants in the button.tsx file itself
-  import { cva } from 'class-variance-authority';
-  import { buttonVariants as defaultButtonVariants } from '@/components/ui/button';
-  
-  // @ts-ignore
-  defaultButtonVariants.config.variants.variant['destructive-outline'] = 'border border-destructive text-destructive bg-transparent hover:bg-destructive/10';
