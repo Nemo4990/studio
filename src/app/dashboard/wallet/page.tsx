@@ -60,6 +60,8 @@ export default function WalletPage() {
   const filteredAgents = mockAgents.filter(
     (agent) => agent.country === selectedCountry
   );
+  
+  const maxWithdrawalAmount = user ? user.level * 100 : 0;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -141,11 +143,32 @@ export default function WalletPage() {
     setLoading(true);
 
     const amount = parseFloat(withdrawalAmount);
+
     if (isNaN(amount) || amount <= 0) {
         toast({
             variant: 'destructive',
             title: 'Invalid Amount',
             description: 'Please enter a valid withdrawal amount.',
+        });
+        setLoading(false);
+        return;
+    }
+
+    if (amount > user.walletBalance) {
+        toast({
+            variant: 'destructive',
+            title: 'Insufficient Balance',
+            description: `Your wallet balance is only $${user.walletBalance.toFixed(2)}.`,
+        });
+        setLoading(false);
+        return;
+    }
+
+    if (amount > maxWithdrawalAmount) {
+        toast({
+            variant: 'destructive',
+            title: 'Withdrawal Limit Exceeded',
+            description: `Your current level allows a maximum withdrawal of $${maxWithdrawalAmount.toFixed(2)}.`,
         });
         setLoading(false);
         return;
@@ -311,10 +334,22 @@ export default function WalletPage() {
             <CardHeader>
               <CardTitle className="font-headline">Request Withdrawal</CardTitle>
               <CardDescription>
-                Enter your local bank details to request a withdrawal.
+                Enter your local bank details to request a withdrawal. Your maximum withdrawal amount is based on your current level.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {user && (
+                <div className="flex justify-between rounded-lg border p-4">
+                    <div>
+                        <p className="text-sm text-muted-foreground">Available Balance</p>
+                        <p className="text-lg font-bold">${user.walletBalance.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Max Withdrawal</p>
+                        <p className="text-lg font-bold">${maxWithdrawalAmount.toFixed(2)}</p>
+                    </div>
+                </div>
+              )}
                <div className="space-y-2">
                 <Label htmlFor="withdraw-amount">Amount (USD)</Label>
                 <Input id="withdraw-amount" type="number" placeholder="100.00" value={withdrawalAmount} onChange={e => setWithdrawalAmount(e.target.value)} />
@@ -331,7 +366,7 @@ export default function WalletPage() {
                 <Label htmlFor="account-name">Account Name</Label>
                 <Input id="account-name" placeholder="Name on the account" value={accountName} onChange={e => setAccountName(e.target.value)} />
               </div>
-              <Button className="w-full" onClick={handleWithdrawalSubmit} disabled={loading}>{loading ? 'Submitting...' : 'Request Withdrawal'}</Button>
+              <Button className="w-full" onClick={handleWithdrawalSubmit} disabled={loading || !user}>{loading ? 'Submitting...' : 'Request Withdrawal'}</Button>
             </CardContent>
           </Card>
         </TabsContent>
