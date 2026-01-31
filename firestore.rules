@@ -1,14 +1,164 @@
+/**
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership security model. All user-generated
+ * content is stored in subcollections under that user's own document. This ensures
+ * that users can only access or modify data that they explicitly own, preventing
+ * unauthorized access to other users' private information.
+ *
+ * Data Structure:
+ * The data is organized hierarchically. A top-level `/users/{userId}` collection
+ * holds public-facing user profile data. All sensitive and user-specific data, such
+ * as submissions, deposits, withdrawals, and testimonials, are stored in nested
+ * subcollections within each user's document (e.g., /users/{userId}/deposits/{depositId}).
+ * A top-level `/tasks` collection holds task definitions that are readable by all
+ * authenticated users but are not modifiable by them.
+ *
+ * Key Security Decisions:
+ * - Strict Ownership: All subcollections under `/users/{userId}` are only accessible
+ *   by the authenticated user whose UID matches `{userId}`.
+ * - No User Listing: To protect user privacy, listing the entire `/users` collection
+ *   is explicitly disallowed. Users can only fetch their own profile.
+ * - Read-Only Public Data: The `/tasks` collection is considered global data. All signed-in
+ *   users can read and list tasks, but client-side writes are disabled to protect
+ *   the integrity of the task data. Modifications must be handled by a trusted backend.
+ * - Denormalization for Authorization: The rules rely on data being structured
+ *   for efficient security. For example, a submission document under `/users/{userId}`
+ *   must contain its own `userId` field, which is validated against the path on creation
+ *   to ensure relational integrity without extra database reads.
+ * - Structural Segregation: Private user data (e.g., deposits) is segregated into
+ *   user-owned subcollections, while public data (tasks) is in a separate top-level
+ *   collection. This makes rules simpler and queries more secure.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // --------------------------------
+    // Helper Functions
+    // --------------------------------
+
+    /**
+     * Verifies that a user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Verifies that the currently authenticated user's UID matches the
+     * provided userId, typically from the document path.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Verifies ownership and ensures the document already exists.
+     * Used for safe update and delete operations.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // --------------------------------
+    // Collection Rules
+    // --------------------------------
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}
+     * @allow (get) A signed-in user (auth.uid: 'user123') fetches their own profile at /users/user123.
+     * @allow (create) A new user (auth.uid: 'user123') creates their profile at /users/user123.
+     * @deny (list) No user can list all documents in the /users collection.
+     * @deny (update) A user ('userABC') tries to update another user's profile ('user123').
+     * @principle Restricts access to a user's own data tree and allows self-creation of a profile.
+     */
     match /users/{userId} {
-      // Users can create, read, and update their own profile
-      allow get, update: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId && request.resource.data.role == 'user';
-      
-      // Admins can read, write, and delete any user profile
-      allow list, get, create, update, delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallow listing all users for privacy
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Controls access to a user's task submissions.
+       * @path /users/{userId}/submissions/{submissionId}
+       * @allow (create) A signed-in user ('user123') creates a new submission for themselves.
+       * @allow (list) A signed-in user ('user123') lists all of their own submissions.
+       * @deny (get) A user ('userABC') tries to read a submission belonging to 'user123'.
+       * @deny (delete) A user ('userABC') tries to delete a submission belonging to 'user123'.
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /submissions/{submissionId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Controls access to a user's deposit records.
+       * @path /users/{userId}/deposits/{depositId}
+       * @allow (create) A signed-in user ('user123') creates a new deposit record for themselves.
+       * @allow (list) A signed-in user ('user123') lists all of their own deposit records.
+       * @deny (get) A user ('userABC') tries to read a deposit belonging to 'user123'.
+       * @deny (update) A user ('userABC') tries to update a deposit belonging to 'user123'.
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /deposits/{depositId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Controls access to a user's withdrawal requests.
+       * @path /users/{userId}/withdrawals/{withdrawalId}
+       * @allow (create) A signed-in user ('user123') creates a new withdrawal request for themselves.
+       * @allow (list) A signed-in user ('user123') lists all of their own withdrawal requests.
+       * @deny (get) A user ('userABC') tries to read a withdrawal request belonging to 'user123'.
+       * @deny (delete) A user ('userABC') tries to delete a withdrawal request belonging to 'user123'.
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /withdrawals/{withdrawalId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Controls access to a user's testimonials.
+       * @path /users/{userId}/testimonials/{testimonialId}
+       * @allow (create) A signed-in user ('user123') creates a testimonial for themselves.
+       * @allow (list) A signed-in user ('user123') lists all of their own testimonials.
+       * @deny (get) A user ('userABC') tries to read a testimonial belonging to 'user123'.
+       * @deny (update) A user ('userABC') tries to update a testimonial belonging to 'user123'.
+       * @principle Enforces document ownership within a user-specific subcollection.
+       */
+      match /testimonials/{testimonialId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Controls access to the global list of tasks.
+     * @path /tasks/{taskId}
+     * @allow (get) Any signed-in user can read the details of any task.
+     * @allow (list) Any signed-in user can query the list of available tasks.
+     * @deny (create) No client is allowed to create, update, or delete tasks.
+     * @deny (update) No client is allowed to create, update, or delete tasks.
+     * @principle Secures global data by making it read-only for clients, requiring a trusted backend for modifications.
+     */
+    match /tasks/{taskId} {
+      allow get, list: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
