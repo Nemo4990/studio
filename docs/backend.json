@@ -121,8 +121,7 @@
           },
           "required": [
             "name",
-            "email",
-            "avatarUrl"
+            "email"
           ]
         },
         "proof": {
@@ -131,19 +130,21 @@
         }
       },
       "required": [
+        "id",
         "userId",
         "taskId",
         "submittedAt",
         "status",
         "taskTitle",
-        "user"
+        "user",
+        "proof"
       ]
     },
     "Deposit": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Deposit",
       "type": "object",
-      "description": "Represents a cryptocurrency deposit made by a user.",
+      "description": "Represents a local currency deposit made by a user via an agent.",
       "properties": {
         "id": {
           "type": "string",
@@ -153,37 +154,54 @@
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Deposit)"
         },
-        "cryptoType": {
+        "agentId": {
           "type": "string",
-          "description": "Type of cryptocurrency deposited (e.g., BTC, ETH)."
+          "description": "Reference to the Agent handling the deposit."
         },
         "amount": {
           "type": "number",
-          "description": "Amount of cryptocurrency deposited."
+          "description": "Amount of local currency deposited."
         },
-        "confirmation": {
+        "currency": {
           "type": "string",
-          "description": "Number of confirmations."
+          "description": "Local currency of the deposit (e.g., USD, NGN)."
         },
         "status": {
           "type": "string",
-          "description": "Status of the deposit (e.g., pending, confirmed)."
+          "description": "Status of the deposit (e.g., pending, confirmed, failed).",
+          "enum": [
+            "pending",
+            "confirmed",
+            "failed"
+          ]
+        },
+        "proofOfPayment": {
+          "type": "string",
+          "description": "URL or reference to the user's proof of payment.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Date and time the deposit was requested.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "cryptoType",
+        "agentId",
         "amount",
-        "confirmation",
-        "status"
+        "currency",
+        "status",
+        "proofOfPayment",
+        "createdAt"
       ]
     },
     "Withdrawal": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Withdrawal",
       "type": "object",
-      "description": "Represents a user's withdrawal request.",
+      "description": "Represents a user's withdrawal request to a local bank account.",
       "properties": {
         "id": {
           "type": "string",
@@ -193,31 +211,57 @@
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Withdrawal)"
         },
-        "cryptoType": {
-          "type": "string",
-          "description": "Type of cryptocurrency for withdrawal."
-        },
         "amount": {
           "type": "number",
-          "description": "Amount of cryptocurrency requested for withdrawal."
+          "description": "Amount of local currency requested for withdrawal."
         },
-        "requestDate": {
+        "currency": {
           "type": "string",
-          "description": "Date and time when the withdrawal request was made.",
-          "format": "date-time"
+          "description": "Local currency for withdrawal (e.g., USD, NGN)."
+        },
+        "userBankInfo": {
+          "type": "object",
+          "description": "User's bank account details for the withdrawal.",
+          "properties": {
+            "bankName": {
+              "type": "string"
+            },
+            "accountNumber": {
+              "type": "string"
+            },
+            "accountName": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "bankName",
+            "accountNumber",
+            "accountName"
+          ]
         },
         "status": {
           "type": "string",
-          "description": "Status of the withdrawal request (e.g., pending, approved, rejected)."
+          "description": "Status of the withdrawal request (e.g., pending, approved, rejected).",
+          "enum": [
+            "pending",
+            "approved",
+            "rejected"
+          ]
+        },
+        "requestedAt": {
+          "type": "string",
+          "description": "Date and time when the withdrawal request was made.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "cryptoType",
         "amount",
-        "requestDate",
-        "status"
+        "currency",
+        "userBankInfo",
+        "status",
+        "requestedAt"
       ]
     },
     "Testimonial": {
@@ -249,6 +293,41 @@
         "userId",
         "content",
         "dateCreated"
+      ]
+    },
+    "Agent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Agent",
+      "description": "Represents a payment agent for local deposits and withdrawals.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the agent."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the agent."
+        },
+        "country": {
+          "type": "string",
+          "description": "Country the agent operates in (e.g., 'USA', 'Nigeria')."
+        },
+        "bankName": {
+          "type": "string",
+          "description": "Name of the agent's bank."
+        },
+        "accountNumber": {
+          "type": "string",
+          "description": "The agent's bank account number for deposits."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "country",
+        "bankName",
+        "accountNumber"
       ]
     }
   },
@@ -294,6 +373,12 @@
         "$ref": "#/entities/Testimonial"
       },
       "description": "Collection of testimonials created by a specific user, indexed by testimonialId."
+    },
+    "/agents/{agentId}": {
+      "schema": {
+        "$ref": "#/entities/Agent"
+      },
+      "description": "Collection of payment agents available for deposits and withdrawals."
     }
   }
 }

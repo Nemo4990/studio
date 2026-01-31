@@ -27,24 +27,41 @@ export type Task = {
   status: 'available' | 'completed' | 'locked';
 };
 
+export type Agent = {
+  id: string;
+  name: string;
+  country: string;
+  bankName: string;
+  accountNumber: string;
+};
+
 export type Deposit = {
   id: string;
   userId?: string;
+  agentId: string;
+  agentName: string; // denormalized
   amount: number;
-  currency: 'BTC' | 'ETH' | 'USDT';
+  currency: string;
   status: 'pending' | 'confirmed' | 'failed';
-  timestamp: Date;
-  txHash: string;
+  proofOfPayment: string;
+  createdAt: Date;
 };
+
+
+export type UserBankInfo = {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+}
 
 export type Withdrawal = {
   id:string;
   userId?: string;
   amount: number;
-  currency: 'USDT';
+  currency: string;
+  userBankInfo: UserBankInfo;
   status: 'pending' | 'approved' | 'rejected';
-  timestamp: Date;
-  walletAddress: string;
+  requestedAt: Date;
 };
 
 export type NavItem = {

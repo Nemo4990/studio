@@ -5,6 +5,7 @@ import type {
   Deposit,
   Withdrawal,
   TaskSubmission,
+  Agent,
 } from './types';
 import { PlaceHolderImages } from './placeholder-images';
 
@@ -109,16 +110,23 @@ const generateUsers = (count: number): User[] => {
 
 export const mockUsers: User[] = generateUsers(25);
 
-export const deposits: Deposit[] = [
-  { id: 'dep1', amount: 0.05, currency: 'ETH', status: 'confirmed', timestamp: new Date('2023-10-01'), txHash: '0xabc...' },
-  { id: 'dep2', amount: 100, currency: 'USDT', status: 'pending', timestamp: new Date('2023-10-05'), txHash: '0xdef...' },
-  { id: 'dep3', amount: 0.01, currency: 'BTC', status: 'failed', timestamp: new Date('2023-09-20'), txHash: '0xghi...' },
+export const mockAgents: Agent[] = [
+    { id: 'agent1', name: 'John Doe', country: 'Nigeria', bankName: 'GTBank', accountNumber: '0123456789' },
+    { id: 'agent2', name: 'Jane Smith', country: 'Nigeria', bankName: 'First Bank', accountNumber: '9876543210' },
+    { id: 'agent3', name: 'Mike Ross', country: 'USA', bankName: 'Bank of America', accountNumber: '1122334455' },
+    { id: 'agent4', name: 'Rachel Zane', country: 'USA', bankName: 'Chase', accountNumber: '5544332211' },
 ];
 
+export const deposits: Deposit[] = [
+    { id: 'dep1', userId: mockUsers[0].id, agentId: 'agent1', agentName: 'John Doe', amount: 50000, currency: 'NGN', status: 'confirmed', proofOfPayment: '#', createdAt: new Date('2023-10-01')},
+    { id: 'dep2', userId: mockUsers[0].id, agentId: 'agent3', agentName: 'Mike Ross', amount: 200, currency: 'USD', status: 'pending', proofOfPayment: '#', createdAt: new Date('2023-10-05')},
+    { id: 'dep3', userId: mockUsers[1].id, agentId: 'agent1', agentName: 'John Doe', amount: 10000, currency: 'NGN', status: 'failed', proofOfPayment: '#', createdAt: new Date('2023-09-20')},
+  ];
+
 export const withdrawals: Withdrawal[] = [
-  { id: 'wd1', amount: 50, currency: 'USDT', status: 'approved', timestamp: new Date('2023-09-28'), walletAddress: '0x123...' },
-  { id: 'wd2', amount: 75, currency: 'USDT', status: 'pending', timestamp: new Date('2023-10-02'), walletAddress: '0x456...' },
-  { id: 'wd3', amount: 20, currency: 'USDT', status: 'rejected', timestamp: new Date('2023-09-15'), walletAddress: '0x789...' },
+    { id: 'wd1', userId: mockUsers[0].id, amount: 25000, currency: 'NGN', userBankInfo: { bankName: 'UBA', accountName: 'User One', accountNumber: '1234567890'}, status: 'approved', requestedAt: new Date('2023-09-28') },
+    { id: 'wd2', userId: mockUsers[0].id, amount: 100, currency: 'USD', userBankInfo: { bankName: 'Wells Fargo', accountName: 'User One', accountNumber: '0987654321'}, status: 'pending', requestedAt: new Date('2023-10-02') },
+    { id: 'wd3', userId: mockUsers[1].id, amount: 5000, currency: 'NGN', userBankInfo: { bankName: 'Access Bank', accountName: 'User Two', accountNumber: '1122334455'}, status: 'rejected', requestedAt: new Date('2023-09-15') },
 ];
 
 export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user, index) => ({
@@ -134,17 +142,28 @@ export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user
   proof: 'https://example.com/proof.pdf',
 }));
 
-export const allDeposits: Deposit[] = mockUsers.flatMap((user, index) => ([
-  { id: `dep_all_${index}_1`, userId: user.id, amount: Math.random() * 1, currency: 'ETH', status: (['confirmed', 'pending', 'failed'] as const)[index % 3], timestamp: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 14), txHash: `0x...${index}a` },
-  { id: `dep_all_${index}_2`, userId: user.id, amount: Math.random() * 500, currency: 'USDT', status: (['confirmed', 'pending', 'failed'] as const)[(index + 1) % 3], timestamp: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 14), txHash: `0x...${index}b` },
-]));
+export const allDeposits: Deposit[] = mockUsers.flatMap((user, index) => {
+    const isNigeria = index % 2 === 0;
+    const agent = isNigeria ? mockAgents[index % 2] : mockAgents[index % 2 + 2];
+    return {
+        id: `dep_all_${index}_1`, 
+        userId: user.id, 
+        agentId: agent.id,
+        agentName: agent.name,
+        amount: isNigeria ? Math.random() * 100000 : Math.random() * 500, 
+        currency: isNigeria ? 'NGN' : 'USD', 
+        status: (['confirmed', 'pending', 'failed'] as const)[index % 3], 
+        proofOfPayment: '#', 
+        createdAt: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 14)
+    }
+});
 
 export const allWithdrawals: Withdrawal[] = mockUsers.slice(0,10).map((user, index) => ({
   id: `wd_all_${index}`,
   userId: user.id,
-  amount: Math.random() * 200,
-  currency: 'USDT',
+  amount: Math.random() * 20000,
+  currency: 'NGN',
+  userBankInfo: { bankName: 'FCMB', accountNumber: '1234567890', accountName: user.name },
   status: (['approved', 'pending', 'rejected'] as const)[index % 3],
-  timestamp: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 7),
-  walletAddress: `0x...${user.id.slice(0,4)}`,
+  requestedAt: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 7),
 }));

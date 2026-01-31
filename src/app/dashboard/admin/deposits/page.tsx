@@ -4,13 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { allDeposits, mockUsers } from "@/lib/data";
+import { allDeposits, mockUsers, mockAgents } from "@/lib/data";
 import { cn } from "@/lib/utils";
-import { Check, X } from "lucide-react";
+import { Check, X, FileText } from "lucide-react";
 
 export default function AdminDepositsPage() {
     
     const getUserById = (id: string) => mockUsers.find(u => u.id === id);
+    const getAgentById = (id: string) => mockAgents.find(a => a.id === id);
 
     return (
         <>
@@ -22,15 +23,17 @@ export default function AdminDepositsPage() {
                             <TableRow>
                                 <TableHead>User</TableHead>
                                 <TableHead>Amount</TableHead>
+                                <TableHead>Agent</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead>Tx Hash</TableHead>
+                                <TableHead>Proof</TableHead>
                                 <TableHead>Actions</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {allDeposits.map(deposit => {
                                 const user = getUserById(deposit.userId!);
+                                const agent = getAgentById(deposit.agentId);
                                 return (
                                     <TableRow key={deposit.id}>
                                         <TableCell>
@@ -44,12 +47,20 @@ export default function AdminDepositsPage() {
                                                 </div>
                                             )}
                                         </TableCell>
-                                        <TableCell>{deposit.amount.toFixed(4)} {deposit.currency}</TableCell>
+                                        <TableCell>{deposit.amount.toLocaleString()} {deposit.currency}</TableCell>
+                                        <TableCell>{agent?.name}</TableCell>
                                         <TableCell>
                                             <Badge variant={deposit.status === 'confirmed' ? 'default' : deposit.status === 'failed' ? 'destructive' : 'secondary'} className={cn(deposit.status === 'confirmed' && 'bg-green-500/80')}>{deposit.status}</Badge>
                                         </TableCell>
-                                        <TableCell>{deposit.timestamp.toLocaleDateString()}</TableCell>
-                                        <TableCell className="font-mono text-xs">{deposit.txHash}</TableCell>
+                                        <TableCell>{deposit.createdAt.toLocaleDateString()}</TableCell>
+                                        <TableCell>
+                                            <Button variant="outline" size="sm" asChild>
+                                                <a href={deposit.proofOfPayment} target="_blank" rel="noopener noreferrer">
+                                                    <FileText className="size-4 mr-2" />
+                                                    View
+                                                </a>
+                                            </Button>
+                                        </TableCell>
                                         <TableCell>
                                             {deposit.status === 'pending' && (
                                                 <div className="flex gap-2">

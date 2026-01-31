@@ -22,7 +22,7 @@ export default function AdminWithdrawalsPage() {
                             <TableRow>
                                 <TableHead>User</TableHead>
                                 <TableHead>Amount</TableHead>
-                                <TableHead>Wallet Address</TableHead>
+                                <TableHead>Bank Info</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Date</TableHead>
                                 <TableHead>Actions</TableHead>
@@ -44,12 +44,15 @@ export default function AdminWithdrawalsPage() {
                                                 </div>
                                             )}
                                         </TableCell>
-                                        <TableCell>${withdrawal.amount.toFixed(2)}</TableCell>
-                                        <TableCell className="font-mono text-xs">{withdrawal.walletAddress}</TableCell>
+                                        <TableCell>{withdrawal.amount.toLocaleString()} {withdrawal.currency}</TableCell>
+                                        <TableCell>
+                                            <div className="text-sm font-medium">{withdrawal.userBankInfo.accountName}</div>
+                                            <div className="text-xs text-muted-foreground">{withdrawal.userBankInfo.bankName} - {withdrawal.userBankInfo.accountNumber}</div>
+                                        </TableCell>
                                         <TableCell>
                                             <Badge variant={withdrawal.status === 'approved' ? 'default' : withdrawal.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(withdrawal.status === 'approved' && 'bg-green-500/80')}>{withdrawal.status}</Badge>
                                         </TableCell>
-                                        <TableCell>{withdrawal.timestamp.toLocaleDateString()}</TableCell>
+                                        <TableCell>{withdrawal.requestedAt.toLocaleDateString()}</TableCell>
                                         <TableCell>
                                             {withdrawal.status === 'pending' && (
                                                 <div className="flex gap-2">
