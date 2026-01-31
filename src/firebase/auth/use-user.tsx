@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, type User as FirebaseAuthUser } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase/provider';
 import type { User } from '@/lib/types';
 import { useMemoFirebase } from '@/hooks/use-memo-firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface UseUserReturn {
   user: User | null;
@@ -25,6 +27,10 @@ export function useUser(): UseUserReturn {
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setFirebaseUser(user);
+      if (!user) {
+        setLoading(false);
+        setProfile(null);
+      }
     }, (err) => {
         setError(err);
         setLoading(false);
@@ -39,11 +45,8 @@ export function useUser(): UseUserReturn {
   );
   
   useEffect(() => {
-    if (!userDocRef) {
-        setProfile(null);
-        // If there's no user, we are not loading anymore
-        if (!firebaseUser) setLoading(false);
-        return;
+    if (!userDocRef || !firebaseUser) {
+      return;
     }
 
     setLoading(true);
@@ -57,11 +60,34 @@ export function useUser(): UseUserReturn {
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
         } as User;
         setProfile(userProfile);
+        setLoading(false);
       } else {
-        setProfile(null);
-        setError(new Error("User profile not found in Firestore."));
+        // User is authenticated, but no profile exists. Let's create one.
+        const userProfileData = {
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
+          email: firebaseUser.email,
+          role: 'user',
+          level: 1,
+          walletBalance: 0,
+          createdAt: serverTimestamp(),
+          avatarUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`
+        };
+
+        setDoc(userDocRef, userProfileData)
+          .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: userProfileData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setError(permissionError);
+            setLoading(false);
+          });
+        // The snapshot listener will be re-triggered with the new document data,
+        // which will then set the profile and loading state correctly.
       }
-      setLoading(false);
     }, (err) => {
         setError(err);
         setLoading(false);
