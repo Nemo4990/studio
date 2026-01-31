@@ -14,22 +14,21 @@ import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { Timestamp } from "firebase/firestore";
 
-export default function AdminWithdrawalsPage() {
-    const { user: adminUser, loading: userLoading } = useUser();
+function AdminWithdrawalsView() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // 1. Fetch all withdrawals
+    // Fetch all withdrawals
     const withdrawalsQuery = useMemoFirebase(
-        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'withdrawals') : null,
-        [firestore, adminUser]
+        () => firestore ? collection(firestore, 'withdrawals') : null,
+        [firestore]
     );
     const { data: withdrawals, isLoading: withdrawalsLoading } = useCollection<Withdrawal>(withdrawalsQuery);
 
-    // 2. Fetch all users
+    // Fetch all users
     const usersQuery = useMemoFirebase(
-        () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'users') : null,
-        [firestore, adminUser]
+        () => firestore ? collection(firestore, 'users') : null,
+        [firestore]
     );
     const { data: users, isLoading: usersLoading } = useCollection<User>(usersQuery);
 
@@ -51,8 +50,6 @@ export default function AdminWithdrawalsPage() {
                 description: `The withdrawal status has been updated.`,
                 variant: newStatus === 'rejected' ? 'destructive' : 'default',
             });
-            // Note: Balance is NOT automatically deducted here. This is a complex transaction
-            // that should be handled carefully, likely on a backend.
         } catch (e) {
             console.error(e);
             toast({
@@ -63,15 +60,87 @@ export default function AdminWithdrawalsPage() {
         }
     };
     
-    const isLoading = userLoading || withdrawalsLoading || usersLoading;
+    const isLoading = withdrawalsLoading || usersLoading;
 
     if (isLoading) {
         return (
+            <Card>
+                <CardContent className="pt-6 text-center text-muted-foreground">
+                    Loading withdrawals...
+                </CardContent>
+            </Card>
+        )
+    }
+    
+    return (
+        <Card>
+            <CardContent className="pt-6">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Bank Info</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {withdrawals && withdrawals.map(withdrawal => {
+                            const user = getUserById(withdrawal.userId);
+                            return (
+                                <TableRow key={withdrawal.id}>
+                                    <TableCell>
+                                        {user ? (
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-8 w-8">
+                                                    <AvatarImage src={user.avatarUrl} alt={user.name} />
+                                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>{user.name}</div>
+                                            </div>
+                                        ) : (
+                                            <div>{withdrawal.userId}</div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>{withdrawal.amount.toLocaleString()} {withdrawal.currency}</TableCell>
+                                    <TableCell>
+                                        <div className="text-sm font-medium">{withdrawal.userBankInfo.accountName}</div>
+                                        <div className="text-xs text-muted-foreground">{withdrawal.userBankInfo.bankName} - {withdrawal.userBankInfo.accountNumber}</div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={withdrawal.status === 'approved' ? 'default' : withdrawal.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(withdrawal.status === 'approved' && 'bg-green-500/80')}>{withdrawal.status}</Badge>
+                                    </TableCell>
+                                    <TableCell>{(withdrawal.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
+                                    <TableCell>
+                                        {withdrawal.status === 'pending' && (
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="outline" onClick={() => handleStatusChange(withdrawal.id, 'approved')}><Check className="size-4 mr-2" />Approve</Button>
+                                                <Button size="sm" variant="destructive-outline" onClick={() => handleStatusChange(withdrawal.id, 'rejected')}><X className="size-4 mr-2" />Reject</Button>
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
+
+export default function AdminWithdrawalsPage() {
+    const { user: adminUser, loading: userLoading } = useUser();
+    
+    if (userLoading) {
+        return (
             <>
-                <PageHeader title="Withdrawals" description="Review and approve or reject user withdrawal requests." />
+                <PageHeader title="Withdrawals" description="Verifying permissions..." />
                 <Card>
                     <CardContent className="pt-6 text-center text-muted-foreground">
-                        Loading withdrawals...
+                        Loading...
                     </CardContent>
                 </Card>
             </>
@@ -85,61 +154,7 @@ export default function AdminWithdrawalsPage() {
     return (
         <>
             <PageHeader title="Withdrawals" description="Review and approve or reject user withdrawal requests." />
-            <Card>
-                <CardContent className="pt-6">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>User</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Bank Info</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {withdrawals && withdrawals.map(withdrawal => {
-                                const user = getUserById(withdrawal.userId);
-                                return (
-                                    <TableRow key={withdrawal.id}>
-                                        <TableCell>
-                                            {user ? (
-                                                <div className="flex items-center gap-3">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarImage src={user.avatarUrl} alt={user.name} />
-                                                        <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                                                    </Avatar>
-                                                    <div>{user.name}</div>
-                                                </div>
-                                            ) : (
-                                                <div>{withdrawal.userId}</div>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>{withdrawal.amount.toLocaleString()} {withdrawal.currency}</TableCell>
-                                        <TableCell>
-                                            <div className="text-sm font-medium">{withdrawal.userBankInfo.accountName}</div>
-                                            <div className="text-xs text-muted-foreground">{withdrawal.userBankInfo.bankName} - {withdrawal.userBankInfo.accountNumber}</div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={withdrawal.status === 'approved' ? 'default' : withdrawal.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(withdrawal.status === 'approved' && 'bg-green-500/80')}>{withdrawal.status}</Badge>
-                                        </TableCell>
-                                        <TableCell>{(withdrawal.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
-                                        <TableCell>
-                                            {withdrawal.status === 'pending' && (
-                                                <div className="flex gap-2">
-                                                    <Button size="sm" variant="outline" onClick={() => handleStatusChange(withdrawal.id, 'approved')}><Check className="size-4 mr-2" />Approve</Button>
-                                                    <Button size="sm" variant="destructive-outline" onClick={() => handleStatusChange(withdrawal.id, 'rejected')}><X className="size-4 mr-2" />Reject</Button>
-                                                </div>
-                                            )}
-                                        </TableCell>
-                                    </TableRow>
-                                )
-                            })}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+            <AdminWithdrawalsView />
         </>
     )
 }
