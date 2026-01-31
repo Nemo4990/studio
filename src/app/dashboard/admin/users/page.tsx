@@ -6,17 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useCollection } from "@/firebase/firestore/use-collection";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import type { User } from "@/lib/types";
-import { collection, getFirestore } from "firebase/firestore";
+import { collection } from "firebase/firestore";
 import { MoreHorizontal } from "lucide-react";
-import { useMemo } from "react";
-import { useMemoFirebase } from "@/hooks/use-memo-firebase";
-import { getFirebase } from "@/firebase";
 
 export default function AdminUsersPage() {
-    const { firestore } = getFirebase();
-    const usersQuery = useMemoFirebase(() => collection(firestore, 'users'), [firestore]);
+    const firestore = useFirestore();
+    const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
     const { data: users, loading } = useCollection<User>(usersQuery);
 
     return (

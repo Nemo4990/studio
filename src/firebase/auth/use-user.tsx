@@ -3,11 +3,9 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, type User as FirebaseAuthUser } from 'firebase/auth';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase/provider';
+import { useAuth, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import type { User } from '@/lib/types';
-import { useMemoFirebase } from '@/hooks/use-memo-firebase';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+
 
 interface UseUserReturn {
   user: User | null;

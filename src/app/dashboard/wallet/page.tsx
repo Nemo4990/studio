@@ -34,8 +34,14 @@ import React, { useState, useMemo } from 'react';
 import type { Agent, Deposit, Withdrawal } from '@/lib/types';
 import { Banknote, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase/auth/use-user';
-import { useFirestore } from '@/firebase/provider';
+import {
+  useUser,
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+  errorEmitter,
+  FirestorePermissionError,
+} from '@/firebase';
 import {
   collection,
   addDoc,
@@ -44,10 +50,6 @@ import {
   orderBy,
   Timestamp,
 } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { useMemoFirebase } from '@/hooks/use-memo-firebase';
 
 type Transaction = (
   | ({ type: 'deposit' } & Deposit)
