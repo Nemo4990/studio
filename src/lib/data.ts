@@ -57,28 +57,12 @@ export const userTasks: Task[] = [
       status: 'available',
     },
     {
-      id: '3',
-      title: 'Meme Magic Contest',
-      description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!',
-      reward: 25,
-      minLevel: 2,
-      status: 'available',
-    },
-    {
-      id: '4',
-      title: 'Feature Feedback',
-      description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.',
-      reward: 15,
-      minLevel: 1,
-      status: 'completed',
-    },
-    {
-      id: '5',
-      title: 'Blockchain Detective',
-      description: 'Find the secret message hidden in a transaction on the Ethereum testnet. A real challenge for a true crypto sleuth.',
-      reward: 75,
-      minLevel: 3,
-      status: 'locked',
+        id: '7',
+        title: 'First Deposit Bonus',
+        description: 'Make your first deposit of $10 or more and receive an instant $5 bonus reward!',
+        reward: 5,
+        minLevel: 1,
+        status: 'available',
     },
     {
       id: '6',
@@ -87,6 +71,54 @@ export const userTasks: Task[] = [
       reward: 10,
       minLevel: 1,
       status: 'available',
+    },
+    {
+        id: '8',
+        title: 'Invite a Friend',
+        description: 'Share your referral link. When your friend signs up and completes their first task, you both earn $10.',
+        reward: 10,
+        minLevel: 2,
+        status: 'available',
+    },
+    {
+      id: '3',
+      title: 'Meme Magic Contest',
+      description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!',
+      reward: 25,
+      minLevel: 2,
+      status: 'locked',
+    },
+    {
+      id: '4',
+      title: 'Feature Feedback',
+      description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.',
+      reward: 15,
+      minLevel: 3,
+      status: 'completed',
+    },
+    {
+        id: '9',
+        title: 'Task Streak Challenge',
+        description: 'Complete 7 tasks in 7 days to unlock a special streak bonus. Keep the momentum going!',
+        reward: 50,
+        minLevel: 3,
+        status: 'locked',
+    },
+    {
+      id: '5',
+      title: 'Blockchain Detective',
+      description: 'Find the secret message hidden in a transaction on the Ethereum testnet. A real challenge for a true crypto sleuth.',
+      reward: 75,
+      minLevel: 4,
+      status: 'locked',
+    },
+    {
+        id: '10',
+        title: 'Content Creator Program',
+        description: 'Create a YouTube video reviewing TaskVerse. Must be over 3 minutes long and have high-quality audio/video.',
+        reward: 150,
+        minLevel: 5,
+        status: 'locked',
     },
   ];
 
@@ -117,18 +149,24 @@ export const mockAgents: Agent[] = [
     { id: 'agent4', name: 'Rachel Zane', country: 'USA', bankName: 'Chase', accountNumber: '5544332211' },
 ];
 
-export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user, index) => ({
-  id: `sub${index + 1}`,
-  user: {
-    name: user.name,
-    avatarUrl: user.avatarUrl,
-    email: user.email,
-  },
-  taskTitle: userTasks[index % userTasks.length].title,
-  submittedAt: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 7),
-  status: (['pending', 'approved', 'rejected'] as const)[index % 3],
-  proof: 'https://example.com/proof.pdf',
-}));
+export const taskSubmissions: TaskSubmission[] = mockUsers.slice(0, 5).map((user, index) => {
+    const task = userTasks[index % userTasks.length];
+    return {
+        id: `sub${index + 1}`,
+        userId: user.id,
+        taskId: task.id,
+        reward: task.reward,
+        user: {
+            name: user.name,
+            avatarUrl: user.avatarUrl,
+            email: user.email,
+        },
+        taskTitle: task.title,
+        submittedAt: new Date(new Date().getTime() - Math.random() * 1000 * 60 * 60 * 24 * 7),
+        status: (['pending', 'approved', 'rejected'] as const)[index % 3],
+        proof: 'https://example.com/proof.pdf',
+    }
+});
 
 export const allDeposits: Deposit[] = mockUsers.flatMap((user, index) => {
     const isNigeria = index % 2 === 0;
