@@ -13,7 +13,7 @@ import {
 import { userTasks } from '@/lib/data';
 import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles } from 'lucide-react';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase';
 import { useFirestore } from '@/firebase/provider';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';

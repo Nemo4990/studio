@@ -3,7 +3,7 @@
 import AppSidebar from '@/components/dashboard/app-sidebar';
 import AppHeader from '@/components/dashboard/app-header';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';

@@ -34,8 +34,8 @@ import React, { useState, useMemo } from 'react';
 import type { Agent, Deposit, Withdrawal } from '@/lib/types';
 import { Banknote, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useUser } from '@/firebase/auth/use-user';
 import {
+  useUser,
   useFirestore,
   useCollection,
   useMemoFirebase,

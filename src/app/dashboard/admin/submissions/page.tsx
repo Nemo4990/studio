@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { TaskSubmission, User } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -28,7 +28,6 @@ import {
 } from 'firebase/firestore';
 import { Check, X } from 'lucide-react';
 import React from 'react';
-import { useUser } from '@/firebase/auth/use-user';
 
 type SubmissionTableProps = {
   submissions: TaskSubmission[];
