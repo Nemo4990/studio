@@ -76,7 +76,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Submission",
       "type": "object",
-      "description": "Represents a user's submission for a task.",
+      "description": "Represents a user's submission for a task. Contains denormalized user and task data for easier querying in the admin panel.",
       "properties": {
         "id": {
           "type": "string",
@@ -90,7 +90,7 @@
           "type": "string",
           "description": "Reference to Task. (Relationship: Task 1:N Submission)"
         },
-        "submissionDate": {
+        "submittedAt": {
           "type": "string",
           "description": "Date and time when the task was submitted.",
           "format": "date-time"
@@ -98,14 +98,45 @@
         "status": {
           "type": "string",
           "description": "Status of the submission (e.g., pending, approved, rejected)."
+        },
+        "taskTitle": {
+          "type": "string",
+          "description": "Denormalized title of the submitted task."
+        },
+        "user": {
+          "type": "object",
+          "description": "Denormalized user data for display purposes.",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email"
+            },
+            "avatarUrl": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "name",
+            "email",
+            "avatarUrl"
+          ]
+        },
+        "proof": {
+          "type": "string",
+          "description": "A URL or reference to the proof of task completion."
         }
       },
       "required": [
-        "id",
         "userId",
         "taskId",
-        "submissionDate",
-        "status"
+        "submittedAt",
+        "status",
+        "taskTitle",
+        "user"
       ]
     },
     "Deposit": {
