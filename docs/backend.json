@@ -13,20 +13,24 @@
         },
         "email": {
           "type": "string",
-          "description": "Email address of the user.",
+          "description": "User's email address.",
           "format": "email"
         },
         "username": {
           "type": "string",
-          "description": "Username of the user."
+          "description": "User's chosen username."
         },
         "level": {
           "type": "number",
-          "description": "The current level of the user."
+          "description": "User's current level within the platform."
         },
-        "walletBalance": {
-          "type": "number",
-          "description": "The current balance of the user's wallet."
+        "role": {
+          "type": "string",
+          "description": "User's role (e.g., 'admin', 'user')."
+        },
+        "walletId": {
+          "type": "string",
+          "description": "Reference to the user's wallet. (Relationship: User 1:1 Wallet)"
         }
       },
       "required": [
@@ -34,14 +38,15 @@
         "email",
         "username",
         "level",
-        "walletBalance"
+        "role",
+        "walletId"
       ]
     },
     "Task": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Task",
       "type": "object",
-      "description": "Represents a task that users can complete.",
+      "description": "Represents a task available on the NovaChain Nexus platform.",
       "properties": {
         "id": {
           "type": "string",
@@ -55,57 +60,21 @@
           "type": "string",
           "description": "Detailed description of the task."
         },
-        "rewardAmount": {
+        "reward": {
           "type": "number",
-          "description": "The reward amount for completing the task."
+          "description": "Reward amount for completing the task."
         },
         "requiredLevel": {
           "type": "number",
-          "description": "The user level required to access the task."
+          "description": "Minimum user level required to access the task."
         }
       },
       "required": [
         "id",
         "name",
         "description",
-        "rewardAmount",
+        "reward",
         "requiredLevel"
-      ]
-    },
-    "Submission": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Submission",
-      "type": "object",
-      "description": "Represents a user's submission for a task.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the submission."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Submission)"
-        },
-        "taskId": {
-          "type": "string",
-          "description": "Reference to Task. (Relationship: Task 1:N Submission)"
-        },
-        "submissionDate": {
-          "type": "string",
-          "description": "Date and time when the task was submitted.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "Status of the submission (e.g., pending, approved, rejected)."
-        }
-      },
-      "required": [
-        "id",
-        "userId",
-        "taskId",
-        "submissionDate",
-        "status"
       ]
     },
     "Deposit": {
@@ -120,32 +89,97 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Deposit)"
-        },
-        "cryptoType": {
-          "type": "string",
-          "description": "Type of cryptocurrency deposited (e.g., BTC, ETH)."
+          "description": "Reference to the user who made the deposit. (Relationship: User 1:N Deposit)"
         },
         "amount": {
           "type": "number",
           "description": "Amount of cryptocurrency deposited."
         },
-        "confirmation": {
+        "cryptoType": {
           "type": "string",
-          "description": "Number of confirmations."
+          "description": "Type of cryptocurrency deposited (e.g., BTC, ETH)."
+        },
+        "transactionHash": {
+          "type": "string",
+          "description": "Transaction hash of the deposit."
+        },
+        "confirmation": {
+          "type": "number",
+          "description": "Transaction confirmation number."
         },
         "status": {
           "type": "string",
-          "description": "Status of the deposit (e.g., pending, confirmed)."
+          "description": "Status of the deposit (e.g., 'pending', 'confirmed')."
         }
       },
       "required": [
         "id",
         "userId",
-        "cryptoType",
         "amount",
+        "cryptoType",
+        "transactionHash",
         "confirmation",
         "status"
+      ]
+    },
+    "Submission": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Submission",
+      "type": "object",
+      "description": "Represents a user's submission for a task.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the submission."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the user who submitted the task. (Relationship: User 1:N Submission)"
+        },
+        "taskId": {
+          "type": "string",
+          "description": "Reference to the task being submitted. (Relationship: Task 1:N Submission)"
+        },
+        "submissionDate": {
+          "type": "string",
+          "description": "Date and time of the submission.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the submission (e.g., 'pending', 'approved', 'rejected')."
+        },
+        "submissionDetails": {
+          "type": "string",
+          "description": "Details regarding submission (e.g., link to code)"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "taskId",
+        "submissionDate",
+        "status"
+      ]
+    },
+    "Wallet": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Wallet",
+      "type": "object",
+      "description": "Represents a user's wallet and their balances.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the wallet."
+        },
+        "balance": {
+          "type": "number",
+          "description": "User's current balance."
+        }
+      },
+      "required": [
+        "id",
+        "balance"
       ]
     },
     "Withdrawal": {
@@ -160,31 +194,36 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Withdrawal)"
-        },
-        "cryptoType": {
-          "type": "string",
-          "description": "Type of cryptocurrency for withdrawal."
+          "description": "Reference to the user who requested the withdrawal. (Relationship: User 1:N Withdrawal)"
         },
         "amount": {
           "type": "number",
-          "description": "Amount of cryptocurrency requested for withdrawal."
+          "description": "Amount of cryptocurrency to withdraw."
+        },
+        "cryptoType": {
+          "type": "string",
+          "description": "Type of cryptocurrency to withdraw (e.g., BTC, ETH)."
+        },
+        "withdrawalAddress": {
+          "type": "string",
+          "description": "User's cryptocurrency withdrawal address."
         },
         "requestDate": {
           "type": "string",
-          "description": "Date and time when the withdrawal request was made.",
+          "description": "Date and time of the withdrawal request.",
           "format": "date-time"
         },
         "status": {
           "type": "string",
-          "description": "Status of the withdrawal request (e.g., pending, approved, rejected)."
+          "description": "Status of the withdrawal request (e.g., 'pending', 'approved', 'rejected')."
         }
       },
       "required": [
         "id",
         "userId",
-        "cryptoType",
         "amount",
+        "cryptoType",
+        "withdrawalAddress",
         "requestDate",
         "status"
       ]
@@ -201,15 +240,15 @@
         },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:N Testimonial)"
+          "description": "Reference to the user who provided the testimonial. (Relationship: User 1:N Testimonial)"
         },
         "content": {
           "type": "string",
-          "description": "The testimonial text."
+          "description": "The testimonial content."
         },
         "dateCreated": {
           "type": "string",
-          "description": "Date the testimonial was created",
+          "description": "Date and time of the testimonial's creation.",
           "format": "date-time"
         }
       },
@@ -236,7 +275,7 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Collection of user profiles, indexed by userId.",
+          "description": "Stores user profiles. Uses path-based ownership for private data. Includes 'id' as userId for path.",
           "params": [
             {
               "name": "userId",
@@ -252,31 +291,11 @@
           "schema": {
             "$ref": "#/backend/entities/Task"
           },
-          "description": "Collection of tasks available for users to complete, indexed by taskId.",
+          "description": "Stores tasks available on the platform.",
           "params": [
             {
               "name": "taskId",
               "description": "The unique identifier for the task."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/submissions/{submissionId}",
-        "definition": {
-          "entityName": "Submission",
-          "schema": {
-            "$ref": "#/backend/entities/Submission"
-          },
-          "description": "Submissions made by a specific user for a specific task. Includes denormalized fields from the associated Task (e.g., `requiredLevel`) for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user who made the submission."
-            },
-            {
-              "name": "submissionId",
-              "description": "The unique identifier for the submission."
             }
           ]
         }
@@ -288,15 +307,51 @@
           "schema": {
             "$ref": "#/backend/entities/Deposit"
           },
-          "description": "Collection of deposits made by a specific user, indexed by depositId.",
+          "description": "Stores deposit records for each user. Uses path-based ownership. Includes 'userId' as foreign key to users collection.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who made the deposit."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "depositId",
               "description": "The unique identifier for the deposit."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/submissions/{submissionId}",
+        "definition": {
+          "entityName": "Submission",
+          "schema": {
+            "$ref": "#/backend/entities/Submission"
+          },
+          "description": "Stores task submissions made by users. Uses path-based ownership. Includes 'userId' as foreign key to users collection.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "submissionId",
+              "description": "The unique identifier for the submission."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/wallets/{walletId}",
+        "definition": {
+          "entityName": "Wallet",
+          "schema": {
+            "$ref": "#/backend/entities/Wallet"
+          },
+          "description": "Stores wallet information.",
+          "params": [
+            {
+              "name": "walletId",
+              "description": "The unique identifier for the wallet."
             }
           ]
         }
@@ -308,15 +363,15 @@
           "schema": {
             "$ref": "#/backend/entities/Withdrawal"
           },
-          "description": "Collection of withdrawal requests made by a specific user, indexed by withdrawalId.",
+          "description": "Stores withdrawal requests for each user. Uses path-based ownership. Includes 'userId' as foreign key to users collection.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who made the withdrawal request."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "withdrawalId",
-              "description": "The unique identifier for the withdrawal request."
+              "description": "The unique identifier for the withdrawal."
             }
           ]
         }
@@ -328,11 +383,11 @@
           "schema": {
             "$ref": "#/backend/entities/Testimonial"
           },
-          "description": "Collection of testimonials created by a specific user, indexed by testimonialId.",
+          "description": "Stores user testimonials. Uses path-based ownership. Includes 'userId' as foreign key to users collection.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier for the user who created the testimonial."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "testimonialId",
@@ -342,6 +397,6 @@
         }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to support the NovaChain Nexus platform, emphasizing security, scalability, and ease of debugging. It leverages denormalization and structural segregation to achieve authorization independence, simplifying security rules and enhancing data integrity. The structure aligns with the principle of DBAC (Database-Based Access Control), relying solely on `request.auth.uid` for authorization, avoiding custom claims. The design enables secure list operations (QAPs) by ensuring homogeneous security postures within collections.\n\n**Authorization Independence (Denormalization):**\nTo eliminate `get()` calls in security rules and enable atomic operations, the structure denormalizes authorization-related data. For instance, if access to a submission depends on the task's attributes (e.g., `requiredLevel`), this attribute is copied into the submission document. Similarly, for collaborative data, a membership map (`members: {uid: role}`) is used and denormalized where necessary.\n\n**Structural Segregation:**\nData with different access needs are stored in separate collections. User-specific data like deposits, withdrawals, and testimonials are stored under the `/users/{userId}` path. This segregation simplifies security rules by ensuring all documents in a collection share the same security requirements.\n\n**Access Modeling:**\n- **Private Data:** Path-based ownership (`/users/{userId}/...`) is used for user-owned data.\n- **Collaborative Data:** Not directly applicable in this model, but the pattern is ready for future use, using Membership Maps (`members: {uid: role}`).\n- **Global Roles (DBAC):** Dedicated collections (e.g., `/roles_admin/{uid}`) can be used to manage global roles based on the presence of a document.\n\n**Data Clarity and Predictability:**\nExplicit state modeling is used for entities like submissions, deposits, and withdrawals, with a dedicated `status` field. Consistent naming conventions are applied across the structure, standardizing authorization fields (e.g., `userId`) and using descriptive wildcards (e.g., `{userId}` instead of `{id}`).\n\n**QAPs (Rules are not Filters):**\nThe structure supports secure list operations by ensuring that each collection has a homogeneous security posture. For example, all documents in `/users/{userId}/deposits` can be listed securely because access is controlled by the user's ID."
+    "reasoning": "The Firestore data structure is designed to support the NovaChain Nexus platform, emphasizing security, scalability, and ease of debugging. It adheres to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are Not Filters). Authorization Independence is achieved by denormalizing authorization data (e.g., user level) directly into documents where it's needed. This eliminates the need for `get()` calls in security rules, simplifying them and ensuring atomic operations. Structural Segregation is used to group data with similar security requirements into separate collections (e.g., user-specific data under `/users/{userId}`). This promotes a homogeneous security posture within each collection. Access Modeling employs standardized patterns: path-based ownership for private user data (e.g., `/users/{userId}/deposits/{depositId}`) and the Membership Map pattern for collaborative data (though not explicitly needed here based on the provided entities). The structure supports QAPs by segregating data based on access control needs, avoiding the need to filter based on user roles within the rules themselves.\n\nSpecifically, user level is denormalized into the `tasks` collection. This allow to query for the available tasks a user can access, without using get() on the user document in the security rules, thus improving scalability and resilience.\n\nThe segregation of user owned data such as `/users/{userId}/deposits/{depositId}` allows for simple and robust security rules without having to filter data.\n"
   }
 }
