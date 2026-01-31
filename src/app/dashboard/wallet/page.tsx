@@ -34,11 +34,27 @@ import React, { useState } from 'react';
 import type { Agent } from '@/lib/types';
 import { Banknote, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useUser } from '@/firebase/auth/use-user';
+import { useFirestore } from '@/firebase/provider';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function WalletPage() {
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [depositAmount, setDepositAmount] = useState('');
+  
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  
+  const [loading, setLoading] = useState(false);
 
   const countries = [...new Set(mockAgents.map((agent) => agent.country))];
   const filteredAgents = mockAgents.filter(
@@ -49,6 +65,138 @@ export default function WalletPage() {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copied to clipboard!' });
   };
+
+  const handleDepositSubmit = () => {
+    if (!user || !firestore || !selectedAgent || !depositAmount) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please select an agent and enter a deposit amount.',
+      });
+      return;
+    }
+    setLoading(true);
+
+    const amount = parseFloat(depositAmount);
+    if (isNaN(amount) || amount <= 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Amount',
+            description: 'Please enter a valid deposit amount.',
+        });
+        setLoading(false);
+        return;
+    }
+
+    const depositData = {
+      userId: user.id,
+      agentId: selectedAgent.id,
+      amount: amount,
+      currency: selectedAgent.country === 'Nigeria' ? 'NGN' : 'USD', // Simple currency logic
+      status: 'pending',
+      proofOfPayment: 'https://example.com/placeholder-proof.png', // Placeholder proof
+      createdAt: serverTimestamp(),
+    };
+
+    const depositsRef = collection(firestore, `users/${user.id}/deposits`);
+
+    addDoc(depositsRef, depositData)
+      .then(() => {
+        toast({
+          title: 'Deposit Request Submitted!',
+          description: 'Your request is pending admin approval.',
+        });
+        setDepositAmount('');
+        setSelectedAgent(null);
+        setSelectedCountry('');
+      })
+      .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: depositsRef.path,
+          operation: 'create',
+          requestResourceData: depositData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+
+        toast({
+          variant: 'destructive',
+          title: 'Submission Failed',
+          description: 'There was a problem submitting your request. Please try again.',
+        });
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  const handleWithdrawalSubmit = () => {
+    if (!user || !firestore || !withdrawalAmount || !bankName || !accountNumber || !accountName) {
+        toast({
+            variant: 'destructive',
+            title: 'Missing Information',
+            description: 'Please fill out all fields for the withdrawal request.',
+        });
+        return;
+    }
+    setLoading(true);
+
+    const amount = parseFloat(withdrawalAmount);
+    if (isNaN(amount) || amount <= 0) {
+        toast({
+            variant: 'destructive',
+            title: 'Invalid Amount',
+            description: 'Please enter a valid withdrawal amount.',
+        });
+        setLoading(false);
+        return;
+    }
+
+    const withdrawalData = {
+        userId: user.id,
+        amount: amount,
+        currency: 'USD', // Assuming USD as per the label
+        userBankInfo: {
+            bankName,
+            accountNumber,
+            accountName,
+        },
+        status: 'pending',
+        requestedAt: serverTimestamp(),
+    };
+
+    const withdrawalsRef = collection(firestore, `users/${user.id}/withdrawals`);
+
+    addDoc(withdrawalsRef, withdrawalData)
+        .then(() => {
+            toast({
+                title: 'Withdrawal Request Submitted!',
+                description: 'Your request is pending admin approval.',
+            });
+            // Reset fields
+            setWithdrawalAmount('');
+            setBankName('');
+            setAccountNumber('');
+            setAccountName('');
+        })
+        .catch((serverError) => {
+            const permissionError = new FirestorePermissionError({
+                path: withdrawalsRef.path,
+                operation: 'create',
+                requestResourceData: withdrawalData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+
+            toast({
+                variant: 'destructive',
+                title: 'Submission Failed',
+                description: 'There was a problem submitting your request. Please try again.',
+            });
+        })
+        .finally(() => {
+            setLoading(false);
+        });
+};
+
 
   return (
     <>
@@ -145,13 +293,13 @@ export default function WalletPage() {
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="deposit-amount">Amount</Label>
-                      <Input id="deposit-amount" type="number" placeholder="Enter amount" />
+                      <Input id="deposit-amount" type="number" placeholder="Enter amount" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="proof">Proof of Payment</Label>
                       <Input id="proof" type="file" />
                     </div>
-                    <Button className="w-full">Submit Deposit Request</Button>
+                    <Button className="w-full" onClick={handleDepositSubmit} disabled={loading}>{loading ? 'Submitting...' : 'Submit Deposit Request'}</Button>
                   </CardContent>
                 </Card>
               )}
@@ -169,21 +317,21 @@ export default function WalletPage() {
             <CardContent className="space-y-4">
                <div className="space-y-2">
                 <Label htmlFor="withdraw-amount">Amount (USD)</Label>
-                <Input id="withdraw-amount" type="number" placeholder="100.00" />
+                <Input id="withdraw-amount" type="number" placeholder="100.00" value={withdrawalAmount} onChange={e => setWithdrawalAmount(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bank-name">Bank Name</Label>
-                <Input id="bank-name" placeholder="e.g., Chase Bank" />
+                <Input id="bank-name" placeholder="e.g., Chase Bank" value={bankName} onChange={e => setBankName(e.target.value)}/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="account-number">Account Number</Label>
-                <Input id="account-number" placeholder="Your account number" />
+                <Input id="account-number" placeholder="Your account number" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="account-name">Account Name</Label>
-                <Input id="account-name" placeholder="Name on the account" />
+                <Input id="account-name" placeholder="Name on the account" value={accountName} onChange={e => setAccountName(e.target.value)} />
               </div>
-              <Button className="w-full">Request Withdrawal</Button>
+              <Button className="w-full" onClick={handleWithdrawalSubmit} disabled={loading}>{loading ? 'Submitting...' : 'Request Withdrawal'}</Button>
             </CardContent>
           </Card>
         </TabsContent>
