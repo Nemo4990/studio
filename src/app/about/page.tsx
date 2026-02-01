@@ -40,39 +40,47 @@ export default function AboutPage() {
           </div>
         </section>
 
-        <section className="py-20 md:py-32 overflow-hidden">
+        <section className="py-20 md:py-28">
           <div className="container">
-            <div className="mx-auto max-w-3xl space-y-8 text-lg text-foreground/80">
+            <div className="mx-auto max-w-3xl text-center">
               <h2
                 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl opacity-0 animate-fade-in-up"
                 style={{ animationDelay: '0.6s' }}
               >
                 Our Story
               </h2>
-              <p
-                className="opacity-0 animate-fade-in-up"
+              <div
+                className="mt-8 space-y-6 text-lg leading-relaxed text-muted-foreground opacity-0 animate-fade-in-up"
                 style={{ animationDelay: '0.8s' }}
               >
-                Founded in 2023, TaskVerse was born from a simple yet powerful idea: to create a platform where anyone can earn cryptocurrency by completing simple, meaningful tasks. We saw a gap in the market for a user-friendly gateway into the world of digital assets, one that didn't require deep technical knowledge or significant financial investment.
-              </p>
-              <p
-                className="opacity-0 animate-fade-in-up"
-                style={{ animationDelay: '1.0s' }}
-              >
-                Our team, a diverse group of blockchain enthusiasts, developers, and designers, came together to build a secure, transparent, and rewarding ecosystem. We believe in the power of decentralization and aim to empower individuals globally by providing them with opportunities to participate in the digital economy.
-              </p>
+                <p>
+                  Founded in 2023, TaskVerse was born from a simple yet powerful idea: to create a platform where anyone can earn cryptocurrency by completing simple, meaningful tasks. We saw a gap in the market for a user-friendly gateway into the world of digital assets, one that didn't require deep technical knowledge or significant financial investment.
+                </p>
+                <p>
+                  Our team, a diverse group of blockchain enthusiasts, developers, and designers, came together to build a secure, transparent, and rewarding ecosystem. We believe in the power of decentralization and aim to empower individuals globally by providing them with opportunities to participate in the digital economy.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <section className="bg-secondary py-20 md:py-28">
+          <div className="container">
+            <div className="mx-auto max-w-3xl text-center">
               <h2
                 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl opacity-0 animate-fade-in-up"
                 style={{ animationDelay: '1.2s' }}
               >
                 Our Vision
               </h2>
-              <p
-                className="opacity-0 animate-fade-in-up"
+              <div
+                className="mt-8 space-y-6 text-lg leading-relaxed text-muted-foreground opacity-0 animate-fade-in-up"
                 style={{ animationDelay: '1.4s' }}
               >
-                We envision a world where earning and using cryptocurrency is as common as using the internet. TaskVerse is our first step towards that future. We are committed to continuous innovation, building new features, and forging strong partnerships to provide our users with the best possible experience and the most rewarding opportunities.
-              </p>
+                <p>
+                  We envision a world where earning and using cryptocurrency is as common as using the internet. TaskVerse is our first step towards that future. We are committed to continuous innovation, building new features, and forging strong partnerships to provide our users with the best possible experience and the most rewarding opportunities.
+                </p>
+              </div>
             </div>
           </div>
         </section>
