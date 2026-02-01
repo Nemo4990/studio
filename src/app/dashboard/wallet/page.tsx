@@ -45,11 +45,6 @@ import {
 } from 'firebase/firestore';
 import Link from 'next/link';
 
-type Transaction = (
-  | ({ type: 'deposit' } & Deposit)
-  | ({ type: 'withdrawal' } & Withdrawal)
-) & { date: Date };
-
 const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
 
 export default function WalletPage() {
@@ -109,28 +104,6 @@ export default function WalletPage() {
   );
   const { data: withdrawals, isLoading: withdrawalsLoading } =
     useCollection<Withdrawal>(withdrawalsQuery);
-
-  const transactionHistory: Transaction[] = useMemo(() => {
-    if (!deposits || !withdrawals) return [];
-
-    const combined: Transaction[] = [];
-
-    deposits.forEach((d) => {
-      const date = (d.createdAt as unknown as Timestamp)?.toDate
-        ? (d.createdAt as unknown as Timestamp).toDate()
-        : new Date();
-      combined.push({ ...d, type: 'deposit', date });
-    });
-
-    withdrawals.forEach((w) => {
-      const date = (w.requestedAt as unknown as Timestamp)?.toDate
-        ? (w.requestedAt as unknown as Timestamp).toDate()
-        : new Date();
-      combined.push({ ...w, type: 'withdrawal', date });
-    });
-
-    return combined.sort((a, b) => b.date.getTime() - a.date.getTime());
-  }, [deposits, withdrawals]);
 
   const isLoadingHistory = userLoading || depositsLoading || withdrawalsLoading;
 
@@ -496,96 +469,110 @@ export default function WalletPage() {
                 Transaction History
               </CardTitle>
               <CardDescription>
-                A log of your recent deposits and withdrawals. Rewards for tasks appear after admin approval.
+                A log of your recent deposits and withdrawals.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoadingHistory && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        Loading transaction history...
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {!isLoadingHistory && transactionHistory.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        No transactions found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {!isLoadingHistory &&
-                    transactionHistory.map((tx) =>
-                      tx.type === 'deposit' ? (
-                        <TableRow key={`dep-${tx.id}`}>
-                          <TableCell>Deposit</TableCell>
-                          <TableCell>
-                            {tx.amount.toLocaleString()} {tx.currency}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                tx.status === 'confirmed'
-                                  ? 'default'
-                                  : tx.status === 'failed'
-                                  ? 'destructive'
-                                  : 'secondary'
-                              }
-                              className={cn(
-                                tx.status === 'confirmed' && 'bg-green-500/80'
-                              )}
-                            >
-                              {tx.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{tx.date.toLocaleDateString()}</TableCell>
-                          <TableCell className="text-xs">
-                            via {tx.agentName}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        <TableRow key={`wd-${tx.id}`}>
-                          <TableCell>Withdrawal</TableCell>
-                          <TableCell>
-                            ${tx.amount.toLocaleString()} {tx.currency}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                tx.status === 'approved'
-                                  ? 'default'
-                                  : tx.status === 'rejected'
-                                  ? 'destructive'
-                                  : 'secondary'
-                              }
-                              className={cn(
-                                tx.status === 'approved' && 'bg-green-500/80'
-                              )}
-                            >
-                              {tx.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{tx.date.toLocaleDateString()}</TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {tx.userBankInfo.bankName} - ...
-                            {tx.userBankInfo.accountNumber.slice(-4)}
-                          </TableCell>
-                        </TableRow>
-                      )
+            <CardContent className="space-y-8">
+              {isLoadingHistory ? (
+                 <div className="h-24 text-center">Loading transaction history...</div>
+              ) : (
+                <>
+                  <div>
+                    <h3 className="mb-4 text-lg font-medium">Deposits</h3>
+                    {deposits && deposits.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Agent</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {deposits.map((tx) => (
+                            <TableRow key={`dep-${tx.id}`}>
+                              <TableCell>
+                                {tx.amount.toLocaleString()} {tx.currency}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    tx.status === 'confirmed'
+                                      ? 'default'
+                                      : tx.status === 'failed'
+                                      ? 'destructive'
+                                      : 'secondary'
+                                  }
+                                  className={cn(
+                                    tx.status === 'confirmed' && 'bg-green-500/80'
+                                  )}
+                                >
+                                  {tx.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{(tx.createdAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
+                              <TableCell className="text-xs">
+                                {tx.agentName}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">No deposits found.</p>
                     )}
-                </TableBody>
-              </Table>
+                  </div>
+
+                  <div>
+                    <h3 className="mb-4 text-lg font-medium">Withdrawals</h3>
+                    {withdrawals && withdrawals.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Bank</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {withdrawals.map((tx) => (
+                            <TableRow key={`wd-${tx.id}`}>
+                              <TableCell>
+                                ${tx.amount.toLocaleString()} {tx.currency}
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant={
+                                    tx.status === 'approved'
+                                      ? 'default'
+                                      : tx.status === 'rejected'
+                                      ? 'destructive'
+                                      : 'secondary'
+                                  }
+                                  className={cn(
+                                    tx.status === 'approved' && 'bg-green-500/80'
+                                  )}
+                                >
+                                  {tx.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{(tx.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
+                              <TableCell className="font-mono text-xs">
+                                {tx.userBankInfo.bankName} - ...
+                                {tx.userBankInfo.accountNumber.slice(-4)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                       <p className="text-sm text-muted-foreground text-center py-4">No withdrawals found.</p>
+                    )}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

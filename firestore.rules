@@ -41,7 +41,9 @@ service cloud.firestore {
     }
 
     match /submissions/{submissionId} {
+      // Any authenticated user can create a submission record.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Only admins can read or modify submissions.
       allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
