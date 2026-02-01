@@ -8,16 +8,19 @@ import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { BrainCircuit } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const GRID_SIZE = 3;
 const MIN_LEVEL_TO_PASS = 4;
+const BASE_TIME_PER_LEVEL = 8; // seconds
 
 type GameState = 'not-started' | 'showing-pattern' | 'awaiting-input' | 'finished';
 type Pattern = number[];
 
 const generatePattern = (level: number): Pattern => {
   const newPattern: Pattern = [];
-  for (let i = 0; i < level; i++) {
+  // Level 1 starts with 2 tiles
+  for (let i = 0; i < level + 1; i++) {
     newPattern.push(Math.floor(Math.random() * (GRID_SIZE * GRID_SIZE)));
   }
   return newPattern;
@@ -30,17 +33,29 @@ export default function MemoryPatternGame() {
   const [userSequence, setUserSequence] = useState<Pattern>([]);
   const [activeTile, setActiveTile] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [timer, setTimer] = useState(BASE_TIME_PER_LEVEL);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const hasPassed = level - 1 >= MIN_LEVEL_TO_PASS;
+  const timeForCurrentLevel = Math.max(3, BASE_TIME_PER_LEVEL - Math.floor(level / 2));
+
+  const cleanupTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   const startGame = () => {
     setLevel(1);
     setUserSequence([]);
     setGameState('showing-pattern');
+    cleanupTimer();
   };
   
   useEffect(() => {
@@ -62,8 +77,24 @@ export default function MemoryPatternGame() {
       }, 700);
 
       return () => clearInterval(interval);
+    } else if (gameState === 'awaiting-input') {
+      setTimer(timeForCurrentLevel);
+      timerRef.current = setInterval(() => {
+        setTimer(prev => {
+          if (prev <= 1) {
+            cleanupTimer();
+            setGameState('finished');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+        cleanupTimer();
     }
-  }, [gameState, level]);
+
+    return cleanupTimer;
+  }, [gameState, level, timeForCurrentLevel]);
 
   const handleTileClick = (tileIndex: number) => {
     if (gameState !== 'awaiting-input') return;
@@ -71,16 +102,13 @@ export default function MemoryPatternGame() {
     const newUserSequence = [...userSequence, tileIndex];
     setUserSequence(newUserSequence);
 
-    // Check if the click was correct so far
     if (pattern[newUserSequence.length - 1] !== tileIndex) {
-      // Incorrect click, end game
       setGameState('finished');
       return;
     }
 
-    // Check if the sequence is complete
     if (newUserSequence.length === pattern.length) {
-      // Correct sequence, advance to next level
+      cleanupTimer();
       setTimeout(() => {
         setLevel(level + 1);
         setGameState('showing-pattern');
@@ -95,9 +123,9 @@ export default function MemoryPatternGame() {
     }
     setIsSubmitting(true);
     
-    const taskId = '12'; // Memory Pattern Recall task ID
+    const taskId = '12';
     const taskTitle = 'Memory Pattern Recall';
-    const reward = 5;
+    const reward = 500;
 
     const submissionsColRef = collection(firestore, 'submissions');
     const submissionDocRef = doc(submissionsColRef);
@@ -142,9 +170,15 @@ export default function MemoryPatternGame() {
           message = 'Your turn!';
         }
         return (
-          <div className="flex flex-col items-center">
-            <p className="text-xl font-semibold mb-4">{message}</p>
-            <p className="text-muted-foreground mb-6">Level: {level}</p>
+          <div className="flex flex-col items-center w-full">
+            <p className="text-xl font-semibold mb-2">{message}</p>
+            <p className="text-muted-foreground mb-4">Level: {level}</p>
+            {gameState === 'awaiting-input' && (
+                <div className="w-full max-w-sm mb-4">
+                    <Progress value={(timer / timeForCurrentLevel) * 100} className="h-2" />
+                    <p className="text-center text-sm mt-1 text-muted-foreground">{timer}s remaining</p>
+                </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, index) => (
                 <div
@@ -192,7 +226,7 @@ export default function MemoryPatternGame() {
 
   return (
     <Card className="w-full max-w-2xl bg-black/30 backdrop-blur-sm text-white border-white/20">
-      <CardContent className="p-8 flex flex-col items-center justify-center min-h-[420px]">
+      <CardContent className="p-8 flex flex-col items-center justify-center min-h-[480px]">
         {renderContent()}
       </CardContent>
     </Card>

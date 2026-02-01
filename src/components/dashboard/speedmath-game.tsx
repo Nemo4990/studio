@@ -118,7 +118,7 @@ export default function SpeedmathGame() {
     
     const taskId = '11'; // Speedmath Challenge task ID
     const taskTitle = 'Speedmath Challenge';
-    const reward = 5;
+    const reward = 500;
 
     const submissionsColRef = collection(firestore, 'submissions');
     const submissionDocRef = doc(submissionsColRef);

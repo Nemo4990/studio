@@ -208,7 +208,7 @@ export default function TasksPage() {
               <CardDescription>
                 {task.status === 'locked'
                   ? `Requires Level ${task.minLevel}`
-                  : `$${task.reward} Reward`}
+                  : `${task.reward.toLocaleString()} Coins Reward`}
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">

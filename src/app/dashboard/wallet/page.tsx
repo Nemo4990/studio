@@ -31,7 +31,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import React, { useState, useMemo } from 'react';
 import type { Agent, Deposit, Withdrawal } from '@/lib/types';
-import { Banknote, Copy } from 'lucide-react';
+import { Banknote, Copy, Coins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   useUser,
@@ -55,6 +55,8 @@ type Transaction = (
   | ({ type: 'deposit' } & Deposit)
   | ({ type: 'withdrawal' } & Withdrawal)
 ) & { date: Date };
+
+const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
 
 export default function WalletPage() {
   const { toast } = useToast();
@@ -82,6 +84,8 @@ export default function WalletPage() {
   ) || [], [agents, selectedCountry]);
 
   const maxWithdrawalAmount = user ? (user.level || 1) * 100 : 0;
+  const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
+
 
   const depositsQuery = useMemoFirebase(
     () =>
@@ -241,13 +245,11 @@ export default function WalletPage() {
       return;
     }
 
-    if (amount > (user.walletBalance || 0)) {
+    if (amount > userBalanceInUSD) {
       toast({
         variant: 'destructive',
         title: 'Insufficient Balance',
-        description: `Your wallet balance is only $${(
-          user.walletBalance || 0
-        ).toFixed(2)}.`,
+        description: `Your wallet balance is only $${userBalanceInUSD.toFixed(2)}.`,
       });
       setLoading(false);
       return;
@@ -268,7 +270,7 @@ export default function WalletPage() {
     const withdrawalData = {
       userId: user.id,
       amount: amount,
-      currency: 'USD', // Assuming USD as per the label
+      currency: 'USD',
       userBankInfo: {
         bankName,
         accountNumber,
@@ -332,7 +334,7 @@ export default function WalletPage() {
             <CardHeader>
               <CardTitle className="font-headline">Make a Deposit</CardTitle>
               <CardDescription>
-                Select your country to see available local agents for deposits.
+                Select your country to see available local agents for deposits. Approved deposits will be converted to Coins.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -451,8 +453,7 @@ export default function WalletPage() {
                 Request Withdrawal
               </CardTitle>
               <CardDescription>
-                Enter your local bank details to request a withdrawal. Your
-                maximum withdrawal amount is based on your current level.
+                Convert your Coins to local currency. Your maximum withdrawal amount is based on your current level.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -462,8 +463,12 @@ export default function WalletPage() {
                     <p className="text-sm text-muted-foreground">
                       Available Balance
                     </p>
-                    <p className="text-lg font-bold">
-                      ${(user.walletBalance || 0).toFixed(2)}
+                    <p className="text-lg font-bold flex items-center gap-2">
+                      <Coins className="size-5 text-amber-500" />
+                      {(user.walletBalance || 0).toLocaleString()} Coins
+                      <span className="text-sm text-muted-foreground">
+                        (${userBalanceInUSD.toFixed(2)})
+                      </span>
                     </p>
                   </div>
                   <div className="text-right">
@@ -485,6 +490,9 @@ export default function WalletPage() {
                   value={withdrawalAmount}
                   onChange={(e) => setWithdrawalAmount(e.target.value)}
                 />
+                 <p className="text-xs text-muted-foreground">
+                    Conversion: 100 Coins = $1.00 USD
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="bank-name">Bank Name</Label>
@@ -530,7 +538,7 @@ export default function WalletPage() {
                 Transaction History
               </CardTitle>
               <CardDescription>
-                A log of your recent deposits and withdrawals.
+                A log of your recent deposits and withdrawals. Rewards for tasks appear after admin approval.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -592,7 +600,7 @@ export default function WalletPage() {
                         <TableRow key={`wd-${tx.id}`}>
                           <TableCell>Withdrawal</TableCell>
                           <TableCell>
-                            {tx.amount.toLocaleString()} {tx.currency}
+                            ${tx.amount.toLocaleString()} {tx.currency}
                           </TableCell>
                           <TableCell>
                             <Badge

@@ -25,7 +25,7 @@ import {
   Timestamp,
   updateDoc,
 } from 'firebase/firestore';
-import { Check, X } from 'lucide-react';
+import { Check, X, Coins } from 'lucide-react';
 import React from 'react';
 
 type SubmissionTableProps = {
@@ -87,7 +87,12 @@ function SubmissionTable({
               </div>
             </TableCell>
             <TableCell>{sub.taskTitle}</TableCell>
-            <TableCell>${sub.reward}</TableCell>
+            <TableCell>
+              <div className='flex items-center gap-2'>
+                <Coins className="size-4 text-amber-500" />
+                {sub.reward.toLocaleString()}
+              </div>
+            </TableCell>
             <TableCell>{toDate(sub.submittedAt).toLocaleString()}</TableCell>
             <TableCell>
               {sub.status === 'pending' ? (

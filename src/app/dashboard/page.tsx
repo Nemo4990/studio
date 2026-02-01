@@ -3,7 +3,7 @@
 import PageHeader from '@/components/dashboard/page-header';
 import StatCard from '@/components/dashboard/stat-card';
 import { userTasks } from '@/lib/data';
-import { BarChart, CheckCircle2, CircleDollarSign, Star } from 'lucide-react';
+import { BarChart, CheckCircle2, CircleDollarSign, Star, Coins } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -33,9 +33,9 @@ export default function UserDashboardPage() {
       <PageHeader title="Dashboard" description="Welcome back! Here's a summary of your account." />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Current Level" value={`Level ${user.level}`} icon={Star} description="Complete more tasks to level up" />
-        <StatCard title="Wallet Balance" value={`$${user.walletBalance.toFixed(2)}`} icon={CircleDollarSign} description="Available for withdrawal" />
+        <StatCard title="Wallet Balance" value={`${user.walletBalance.toLocaleString()} Coins`} icon={Coins} description="Available for withdrawal" />
         <StatCard title="Tasks Completed" value={completedTasks} icon={CheckCircle2} description="Keep up the great work!" />
-        <StatCard title="Total Earnings" value="$450.23" icon={BarChart} description="All-time earnings" />
+        <StatCard title="Total Earnings" value="45,023 Coins" icon={BarChart} description="All-time earnings" />
       </div>
       <div className="mt-8">
         <Card>
@@ -50,7 +50,7 @@ export default function UserDashboardPage() {
                         <p className="text-muted-foreground">{userTasks[0].description}</p>
                     </div>
                     <div className="flex items-center gap-4 mt-4 md:mt-0">
-                        <span className="font-semibold text-lg text-primary">+${userTasks[0].reward}</span>
+                        <span className="font-semibold text-lg text-primary">+{userTasks[0].reward} Coins</span>
                         <Button asChild>
                             <Link href="/dashboard/tasks">View Task</Link>
                         </Button>
