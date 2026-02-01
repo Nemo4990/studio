@@ -77,8 +77,8 @@ service cloud.firestore {
        * @allow A user can manage their own deposits. Admins can view for verification.
        */
       match /deposits/{depositId} {
-        allow read, write: if isOwner(userId);
-        allow list: if isOwner(userId) || isAdmin();
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
       }
 
       /**
@@ -87,8 +87,8 @@ service cloud.firestore {
        * @allow A user can manage their own withdrawal requests.
        */
       match /withdrawals/{withdrawalId} {
-        allow read, write: if isOwner(userId);
-        allow list: if isOwner(userId) || isAdmin();
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
       }
 
       /**
@@ -98,7 +98,8 @@ service cloud.firestore {
        * @deny A user cannot access another user's testimonials.
        */
       match /testimonials/{testimonialId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isOwner(userId);
       }
     }
 
@@ -120,7 +121,7 @@ service cloud.firestore {
      * @allow Users can create their own submissions.
      */
     match /submissions/{submissionId} {
-      allow read: if isAdmin() || ('userId' in resource.data && isOwner(resource.data.userId));
+      allow read: if (resource.data.userId == request.auth.uid && 'userId' in resource.data) || isAdmin();
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
