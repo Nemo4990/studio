@@ -86,12 +86,11 @@ service cloud.firestore {
     /**
      * @description Top-level collection for all task submissions.
      * @path /submissions/{submissionId}
-     * @allow Admins can read all submissions.
-     * @allow Users can create their own submissions and query for them.
+     * @allow Admins can read all submissions. Users can read their own.
+     * @allow Users can create their own submissions.
      */
     match /submissions/{submissionId} {
-      allow get: if isOwner(resource.data.userId);
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
@@ -99,12 +98,11 @@ service cloud.firestore {
     /**
      * @description Top-level collection for all deposit requests.
      * @path /deposits/{depositId}
-     * @allow Admins can read all deposits.
-     * @allow Users can create their own deposits and query for them.
+     * @allow Admins can read all deposits. Users can read their own.
+     * @allow Users can create their own deposits.
      */
     match /deposits/{depositId} {
-      allow get: if isOwner(resource.data.userId);
-      allow read: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
@@ -112,14 +110,13 @@ service cloud.firestore {
     /**
      * @description Top-level collection for all withdrawal requests.
      * @path /withdrawals/{withdrawalId}
-     * @allow Admins can read all withdrawals.
-     * @allow Users can create their own withdrawals and query for them.
+     * @allow Admins can read all withdrawals. Users can read their own.
+     * @allow Users can create their own withdrawals.
      */
     match /withdrawals/{withdrawalId} {
-        allow get: if isOwner(resource.data.userId);
-        allow read: if isAdmin();
-        allow create: if isOwner(request.resource.data.userId);
-        allow update, delete: if isAdmin();
+      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update, delete: if isAdmin();
     }
 
     /**
