@@ -51,16 +51,19 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow delete: if false;
 
-      // User-private transaction history. Only the user can create and read.
-      // Admin can update status after review.
+      // User-private transaction history.
       match /deposits/{depositId} {
-        allow get, list, create: if isOwner(userId);
-        allow update, delete: if isOwner(userId) || isAdmin();
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId);
       }
 
       match /withdrawals/{withdrawalId} {
-        allow get, list, create: if isOwner(userId);
-        allow update, delete: if isOwner(userId) || isAdmin();
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId) || isAdmin();
+        allow delete: if isOwner(userId);
       }
       
       match /testimonials/{testimonialId} {
