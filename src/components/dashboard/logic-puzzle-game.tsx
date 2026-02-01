@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { logicPuzzles, type Puzzle } from '@/lib/puzzle-data';
 import { Lightbulb, BrainCircuit, CheckCircle, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 type GameState = 'not-started' | 'playing' | 'finished';
 
@@ -20,6 +21,7 @@ const shuffleArray = <T,>(array: T[]): T[] => {
 export default function LogicPuzzleGame() {
   const [gameState, setGameState] = useState<GameState>('not-started');
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null);
+  const [shuffledOptions, setShuffledOptions] = useState<string[]>([]);
   const [userAnswer, setUserAnswer] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,18 +34,17 @@ export default function LogicPuzzleGame() {
   const startGame = () => {
     const randomPuzzle = shuffleArray(logicPuzzles)[0];
     setPuzzle(randomPuzzle);
+    setShuffledOptions(shuffleArray(randomPuzzle.options));
     setGameState('playing');
     setUserAnswer('');
     setShowHint(false);
     setIsCorrect(null);
   };
 
-  const checkAnswer = (e: React.FormEvent) => {
-    e.preventDefault();
+  const checkAnswer = () => {
     if (!puzzle) return;
 
-    const formattedUserAnswer = userAnswer.trim().toLowerCase();
-    const correct = formattedUserAnswer === puzzle.answer.toLowerCase();
+    const correct = userAnswer === puzzle.correctAnswer;
     
     setIsCorrect(correct);
     setGameState('finished');
@@ -103,17 +104,21 @@ export default function LogicPuzzleGame() {
             <p className="text-xl md:text-2xl leading-relaxed text-muted-foreground mb-8">
               {puzzle.question}
             </p>
-            <form onSubmit={checkAnswer} className="max-w-sm mx-auto space-y-4">
-              <Input
-                type="text"
+             <div className="max-w-md mx-auto space-y-4">
+              <RadioGroup
                 value={userAnswer}
-                onChange={(e) => setUserAnswer(e.target.value)}
-                placeholder="Your answer..."
-                className="text-lg h-12 text-center"
-                autoFocus
-              />
-              <Button type="submit" className="w-full" disabled={!userAnswer}>Submit Answer</Button>
-            </form>
+                onValueChange={setUserAnswer}
+                className="grid grid-cols-1 gap-3"
+              >
+                {shuffledOptions.map((option) => (
+                  <Label key={option} htmlFor={option} className="flex items-center space-x-3 p-4 border border-white/20 rounded-lg cursor-pointer hover:bg-white/10 has-[:checked]:bg-primary has-[:checked]:border-primary transition-colors">
+                      <RadioGroupItem value={option} id={option} className="border-white/50 text-primary-foreground" />
+                      <span className="text-base">{option}</span>
+                  </Label>
+                ))}
+              </RadioGroup>
+              <Button onClick={checkAnswer} className="w-full" disabled={!userAnswer}>Submit Answer</Button>
+            </div>
             <div className="mt-8">
                 <Button variant="ghost" onClick={() => setShowHint(true)} disabled={showHint}>
                     <Lightbulb className="mr-2 size-4" /> Need a hint?
@@ -146,7 +151,7 @@ export default function LogicPuzzleGame() {
                 <>
                     <XCircle className="size-16 text-destructive mb-4" />
                     <h2 className="font-headline text-3xl font-bold mb-2">Not Quite...</h2>
-                    <p className="text-muted-foreground mb-6">That wasn't the right answer. Give it another shot!</p>
+                    <p className="text-muted-foreground mb-6">That wasn't the right answer. The correct answer was: <strong className="text-white">{puzzle?.correctAnswer}</strong>.</p>
                     <Button onClick={startGame} variant="outline">Try Another Puzzle</Button>
                 </>
             )}
