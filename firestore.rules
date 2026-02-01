@@ -15,7 +15,7 @@
  * - Dual-Write Model: The application client writes transaction data to two places: the user's private subcollection
  *   and the admin's top-level review collection. This separation is key to the security model.
  * - Strict Ownership on Subcollections: The `/users/{userId}` path is the cornerstone of user security.
- *   Rules like `isOwner(userId)` ensure only the authenticated user matching the path can access their own data.
+ *   Rules like `request.auth.uid == userId` ensure only the authenticated user matching the path can access their own data.
  * - Admin-Only Top-Level Collections: The top-level `/deposits`, `/withdrawals`, and `/submissions`
  *   collections are locked down for admin use (read, update, delete). A special `create` rule allows users
  *   to initiate a request by writing into this collection, but they cannot view or edit it afterward.
@@ -32,10 +32,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
       // In a real app, this would check a custom claim: request.auth.token.admin == true
       return isSignedIn() && request.auth.token.email == 'admin@taskverse.io';
@@ -47,13 +43,13 @@ service cloud.firestore {
 
     match /users/{userId} {
       // A user can get their own document. This is critical for subcollection queries.
-      allow get: if isOwner(userId);
+      allow get: if request.auth.uid == userId;
       // Only admins can list all users.
       allow list: if isAdmin();
       // A user can create their own document on signup.
-      allow create: if isOwner(userId);
+      allow create: if request.auth.uid == userId;
       // A user can update their own profile, an admin can update any.
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if request.auth.uid == userId || isAdmin();
       // User documents cannot be deleted.
       allow delete: if false;
 
@@ -61,24 +57,29 @@ service cloud.firestore {
       
       match /deposits/{depositId} {
         // A user can read their own transaction history.
-        allow read: if isOwner(userId);
-        // A user can write to their own history.
-        allow create, delete: if isOwner(userId);
+        allow get, list: if request.auth.uid == userId;
+        // A user can write to their own history when creating a request.
+        allow create: if request.auth.uid == userId;
         // An admin can update the status (e.g., from pending to confirmed).
         allow update: if isAdmin();
+        // Deleting is not allowed.
+        allow delete: if false;
       }
 
       match /withdrawals/{withdrawalId} {
         // A user can read their own transaction history.
-        allow read: if isOwner(userId);
-        // A user can write to their own history.
-        allow create, delete: if isOwner(userId);
+        allow get, list: if request.auth.uid == userId;
+        // A user can write to their own history when creating a request.
+        allow create: if request.auth.uid == userId;
         // An admin can update the status (e.g., from pending to approved).
         allow update: if isAdmin();
+        // Deleting is not allowed.
+        allow delete: if false;
       }
       
       match /testimonials/{testimonialId} {
-        allow read, write: if isOwner(userId);
+        // A user can read and write their own testimonials.
+        allow read, write: if request.auth.uid == userId;
       }
     }
 
@@ -90,19 +91,19 @@ service cloud.firestore {
     // Top-level collection for admin review.
     // Users can create (submit) but cannot read the list. Admins have full control.
     match /submissions/{submissionId} {
-      allow create: if isOwner(request.resource.data.userId);
+      allow create: if request.resource.data.userId == request.auth.uid;
       allow read, update, delete: if isAdmin();
     }
     
     // Top-level collection for admin review of deposits.
     match /deposits/{depositId} {
-       allow create: if isOwner(request.resource.data.userId);
+       allow create: if request.resource.data.userId == request.auth.uid;
        allow read, update, delete: if isAdmin();
     }
     
     // Top-level collection for admin review of withdrawals.
     match /withdrawals/{withdrawalId} {
-       allow create: if isOwner(request.resource.data.userId);
+       allow create: if request.resource.data.userId == request.auth.uid;
        allow read, update, delete: if isAdmin();
     }
 
