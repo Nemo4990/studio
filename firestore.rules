@@ -46,13 +46,17 @@ service cloud.firestore {
     }
     
     match /deposits/{depositId} {
-      // Admins can read/write to the denormalized top-level collection. Users cannot.
-      allow read, write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Users can create their own deposit request in this denormalized collection.
+      allow create: if request.auth.uid == request.resource.data.userId;
+      // Admins can read, update, and delete all requests.
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
     match /withdrawals/{withdrawalId} {
-      // Admins can read/write to the denormalized top-level collection. Users cannot.
-      allow read, write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Users can create their own withdrawal request in this denormalized collection.
+      allow create: if request.auth.uid == request.resource.data.userId;
+      // Admins can read, update, and delete all requests.
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
     match /agents/{agentId} {
