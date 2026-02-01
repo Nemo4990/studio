@@ -46,8 +46,8 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     match /users/{userId} {
-      // This `get` rule is critical. It unblocks queries on all subcollections for the owner.
-      allow get: if isOwner(userId) || isAdmin();
+      // A user can get their own document. This is critical for subcollection queries.
+      allow get: if isOwner(userId);
       // Only admins can list all users.
       allow list: if isAdmin();
       // A user can create their own document on signup.
