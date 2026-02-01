@@ -366,17 +366,17 @@
       },
       "description": "Top-level collection of all task submissions from all users."
     },
-    "/deposits/{depositId}": {
+    "/users/{userId}/deposits/{depositId}": {
       "schema": {
         "$ref": "#/entities/Deposit"
       },
-      "description": "Top-level collection of all user deposits."
+      "description": "Collection of deposits for a specific user."
     },
-    "/withdrawals/{withdrawalId}": {
+    "/users/{userId}/withdrawals/{withdrawalId}": {
       "schema": {
         "$ref": "#/entities/Withdrawal"
       },
-      "description": "Top-level collection of all user withdrawal requests."
+      "description": "Collection of withdrawal requests for a specific user."
     },
     "/users/{userId}/testimonials/{testimonialId}": {
       "schema": {
