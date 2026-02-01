@@ -90,7 +90,7 @@ service cloud.firestore {
      * @allow Users can create their own submissions.
      */
     match /submissions/{submissionId} {
-      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow read: if isAdmin() || ('userId' in resource.data && isOwner(resource.data.userId));
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
@@ -102,7 +102,7 @@ service cloud.firestore {
      * @allow Users can create their own deposits.
      */
     match /deposits/{depositId} {
-      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow read: if isAdmin() || ('userId' in resource.data && isOwner(resource.data.userId));
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
@@ -114,7 +114,7 @@ service cloud.firestore {
      * @allow Users can create their own withdrawals.
      */
     match /withdrawals/{withdrawalId} {
-      allow read: if isAdmin() || isOwner(resource.data.userId);
+      allow read: if isAdmin() || ('userId' in resource.data && isOwner(resource.data.userId));
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
