@@ -41,6 +41,7 @@ import {
   orderBy,
   Timestamp,
   where,
+  writeBatch,
 } from 'firebase/firestore';
 import Link from 'next/link';
 
@@ -82,13 +83,12 @@ export default function WalletPage() {
   const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
 
 
-  // Query top-level collections for user's history
+  // Query user-specific sub-collections for their history
   const depositsQuery = useMemoFirebase(
     () =>
       user && firestore
         ? query(
-            collection(firestore, 'deposits'),
-            where('userId', '==', user.id),
+            collection(firestore, 'users', user.id, 'deposits'),
             orderBy('createdAt', 'desc')
           )
         : null,
@@ -101,8 +101,7 @@ export default function WalletPage() {
     () =>
       user && firestore
         ? query(
-            collection(firestore, 'withdrawals'),
-            where('userId', '==', user.id),
+            collection(firestore, 'users', user.id, 'withdrawals'),
             orderBy('requestedAt', 'desc')
           )
         : null,
@@ -168,10 +167,12 @@ export default function WalletPage() {
       return;
     }
     
-    const depositRef = doc(collection(firestore, 'deposits'));
+    // Create a reference for the new document in BOTH collections
+    const userDepositRef = doc(collection(firestore, 'users', user.id, 'deposits'));
+    const topLevelDepositRef = doc(collection(firestore, 'deposits'), userDepositRef.id);
 
     const depositData = {
-      id: depositRef.id,
+      id: userDepositRef.id,
       userId: user.id,
       agentId: selectedAgent.id,
       agentName: selectedAgent.name,
@@ -183,7 +184,12 @@ export default function WalletPage() {
     };
     
     try {
-      await setDoc(depositRef, depositData);
+      // Use a batch to write to both locations atomically
+      const batch = writeBatch(firestore);
+      batch.set(userDepositRef, depositData);
+      batch.set(topLevelDepositRef, depositData);
+      await batch.commit();
+
       toast({
         title: 'Deposit Request Submitted!',
         description: 'Your request is pending admin approval.',
@@ -226,10 +232,11 @@ export default function WalletPage() {
       return;
     }
 
-    const withdrawalRef = doc(collection(firestore, 'withdrawals'));
+    const userWithdrawalRef = doc(collection(firestore, 'users', user.id, 'withdrawals'));
+    const topLevelWithdrawalRef = doc(collection(firestore, 'withdrawals'), userWithdrawalRef.id);
 
     const withdrawalData = {
-      id: withdrawalRef.id,
+      id: userWithdrawalRef.id,
       userId: user.id,
       amount: amount,
       currency: 'USD',
@@ -239,7 +246,11 @@ export default function WalletPage() {
     };
 
     try {
-      await setDoc(withdrawalRef, withdrawalData);
+      const batch = writeBatch(firestore);
+      batch.set(userWithdrawalRef, withdrawalData);
+      batch.set(topLevelWithdrawalRef, withdrawalData);
+      await batch.commit();
+
       toast({
         title: 'Withdrawal Request Submitted!',
         description: 'Your request is pending admin approval.',

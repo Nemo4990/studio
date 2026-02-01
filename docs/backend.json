@@ -382,19 +382,31 @@
       "schema": {
         "$ref": "#/entities/Deposit"
       },
-      "description": "Top-level collection of all deposit requests for admin and user review."
+      "description": "Top-level collection of all deposit requests for admin review. This is a denormalized copy of the data in the user's subcollection."
     },
     "/withdrawals/{withdrawalId}": {
       "schema": {
         "$ref": "#/entities/Withdrawal"
       },
-      "description": "Top-level collection of all withdrawal requests for admin and user review."
+      "description": "Top-level collection of all withdrawal requests for admin review. This is a denormalized copy of the data in the user's subcollection."
     },
     "/users/{userId}/testimonials/{testimonialId}": {
       "schema": {
         "$ref": "#/entities/Testimonial"
       },
       "description": "Collection of testimonials created by a specific user, indexed by testimonialId."
+    },
+    "/users/{userId}/deposits/{depositId}": {
+        "schema": {
+            "$ref": "#/entities/Deposit"
+        },
+        "description": "Collection of deposit requests made by a specific user."
+    },
+    "/users/{userId}/withdrawals/{withdrawalId}": {
+        "schema": {
+            "$ref": "#/entities/Withdrawal"
+        },
+        "description": "Collection of withdrawal requests made by a specific user."
     },
     "/agents/{agentId}": {
       "schema": {

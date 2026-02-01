@@ -16,12 +16,24 @@ service cloud.firestore {
       allow delete: if false;
     }
     
+    // --- User Subcollections ---
+    
     match /users/{userId}/testimonials/{testimonialId} {
       // A user can fully manage their own testimonials.
       allow read, write: if request.auth.uid == userId;
     }
 
-    // --- Top-level Collections ---
+    match /users/{userId}/deposits/{depositId} {
+        // A user can read and write to their own deposits subcollection.
+        allow read, write: if request.auth.uid == userId;
+    }
+
+    match /users/{userId}/withdrawals/{withdrawalId} {
+        // A user can read and write to their own withdrawals subcollection.
+        allow read, write: if request.auth.uid == userId;
+    }
+
+    // --- Top-level Collections (mostly for Admin access) ---
 
     match /tasks/{taskId} {
       allow read: if request.auth != null;
@@ -34,17 +46,13 @@ service cloud.firestore {
     }
     
     match /deposits/{depositId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Admins can manage everything. Users can read their own.
-      allow read: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth.uid == resource.data.userId);
-      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Admins can read/write to the denormalized top-level collection. Users cannot.
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
     match /withdrawals/{withdrawalId} {
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Admins can manage everything. Users can read their own.
-      allow read: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth.uid == resource.data.userId);
-      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Admins can read/write to the denormalized top-level collection. Users cannot.
+      allow read, write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
     match /agents/{agentId} {
