@@ -262,7 +262,7 @@ export default function WalletPage() {
             <CardHeader>
               <CardTitle className="font-headline">Make a Deposit</CardTitle>
               <CardDescription>
-                Agents for your country are shown below. Approved deposits will be converted to Coins.
+                Making a deposit increases your user level, unlocking access to more rewarding tasks. Your wallet balance (Coins) is earned from completing tasks.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

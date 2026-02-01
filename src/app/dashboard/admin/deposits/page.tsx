@@ -47,8 +47,7 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
 
         if (newStatus === 'confirmed') {
             const userRef = doc(firestore, 'users', deposit.userId);
-            const COIN_TO_USD_RATE = 0.01; // 100 coins = $1
-
+            
             try {
                 await runTransaction(firestore, async (transaction) => {
                     const userDoc = await transaction.get(userRef);
@@ -56,12 +55,9 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
                         throw new Error("User not found!");
                     }
                     
-                    const coinsToAdd = deposit.amount / COIN_TO_USD_RATE;
-                    const newBalance = (userDoc.data().walletBalance || 0) + coinsToAdd;
                     const newLevel = (userDoc.data().level || 1) + 1;
 
                     transaction.update(userRef, { 
-                        walletBalance: newBalance,
                         level: newLevel,
                     });
                     transaction.update(depositRef, { status: 'confirmed' });
@@ -70,7 +66,7 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
                 
                 toast({
                     title: `Deposit Confirmed`,
-                    description: `User's balance and level have been updated.`,
+                    description: `User's level has been upgraded.`,
                 });
 
             } catch (e: any) {
