@@ -40,33 +40,33 @@
   }
 
   .dark {
-    --background: 220 15% 10%;
-    --foreground: 220 20% 92%;
-    --card: 220 15% 12%;
-    --card-foreground: 220 20% 92%;
-    --popover: 220 15% 10%;
-    --popover-foreground: 220 20% 92%;
-    --primary: 221.2 83.2% 63.3%;
+    --background: 220 15% 5%;
+    --foreground: 220 20% 96%;
+    --card: 220 15% 10%;
+    --card-foreground: 220 20% 96%;
+    --popover: 220 15% 5%;
+    --popover-foreground: 220 20% 96%;
+    --primary: 180 80% 50%;
     --primary-foreground: 220 15% 10%;
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 220 20% 92%;
+    --secondary: 220 15% 12%;
+    --secondary-foreground: 220 20% 96%;
     --muted: 220 15% 18%;
     --muted-foreground: 220 10% 60%;
-    --accent: 221.2 83.2% 63.3%;
+    --accent: 180 80% 50%;
     --accent-foreground: 220 15% 10%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 220 15% 20%;
-    --input: 220 15% 20%;
-    --ring: 221.2 83.2% 63.3%;
-    --sidebar-background: 220 15% 10%;
+    --border: 220 15% 18%;
+    --input: 220 15% 18%;
+    --ring: 180 80% 50%;
+    --sidebar-background: 220 15% 5%;
     --sidebar-foreground: 220 20% 92%;
-    --sidebar-primary: 221.2 83.2% 63.3%;
+    --sidebar-primary: 180 80% 50%;
     --sidebar-primary-foreground: 220 15% 10%;
-    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent: 220 15% 12%;
     --sidebar-accent-foreground: 220 20% 92%;
-    --sidebar-border: 220 15% 20%;
-    --sidebar-ring: 221.2 83.2% 63.3%;
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: 180 80% 50%;
   }
 }
 
@@ -76,6 +76,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 25% 30%, hsl(var(--secondary)) 0%, transparent 40%), radial-gradient(circle at 75% 70%, hsl(var(--primary) / 0.2) 0%, transparent 40%);
   }
 }
 
@@ -83,19 +84,8 @@
   .font-headline {
     font-family: 'Space Grotesk', sans-serif;
   }
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 1;
+  
+  .text-glow {
+    text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
   }
-  100% {
-    transform: translateY(-1000px) rotate(720deg);
-    opacity: 0;
-  }
-}
-
-.coin {
-  animation: float 12s infinite linear;
 }

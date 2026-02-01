@@ -1,68 +1,90 @@
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
-import {
-  CheckSquare,
-  Wallet,
-  ArrowUpRight,
-  ShieldCheck,
-} from 'lucide-react';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { ArrowRight } from 'lucide-react';
 
 const features = [
   {
-    icon: <CheckSquare className="size-8 text-primary" />,
-    title: 'Task-Based Earnings',
-    description:
-      'Access a variety of tasks based on your level. From social media engagement to content creation, there’s always a way to earn.',
+    id: 'feature_insights',
+    title: 'Insights at your fingertips',
+    description: 'We track your earnings, tasks, and level progress so you can make smarter decisions.',
   },
   {
-    icon: <ArrowUpRight className="size-8 text-primary" />,
-    title: 'Level Up System',
-    description:
-      'Start as a novice and climb the ranks. Higher levels unlock more complex tasks with greater crypto rewards.',
+    id: 'feature_mobile',
+    title: 'Manage in real time',
+    description: 'All your earnings are synced to your in-app wallet. Deposit, withdraw, and manage on the go.',
   },
   {
-    icon: <Wallet className="size-8 text-primary" />,
-    title: 'Instant Wallet & Rewards',
-    description:
-      'Your earnings are instantly credited to your secure in-app wallet. Track your balance and rewards history with ease.',
+    id: 'feature_integrations',
+    title: 'Connect your apps',
+    description: 'Automate tasks by connecting your favorite social media and content platforms.',
   },
   {
-    icon: <ShieldCheck className="size-8 text-primary" />,
-    title: 'Secure & Transparent',
-    description:
-      'We use blockchain technology to ensure all transactions are verified and transparent. Your deposits and withdrawals are safe.',
+    id: 'feature_keyboard',
+    title: 'Work smarter',
+    description: 'Use keyboard shortcuts to navigate and complete tasks faster than ever before.',
   },
 ];
 
 export default function FeaturesSection() {
+    const images = new Map(PlaceHolderImages.map(img => [img.id, img]));
   return (
-    <section id="features" className="py-20 md:py-32 bg-secondary">
-      <div className="container">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            How It Works
-          </h2>
-          <p className="mt-6 text-lg leading-8 text-foreground/70">
-            A simple, rewarding process designed for everyone.
-          </p>
+    <section id="features" className="py-20 md:py-32">
+      <div className="container space-y-24">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div className="max-w-md">
+                <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                    Who said earning crypto has to be boring?
+                </h2>
+            </div>
+            <div>
+                <p className="text-lg text-muted-foreground">
+                    With TaskVerse, managing your crypto earnings is effortless, empowering, and even fun. We've simplified the process to give you the power of advanced financial management right at your fingertips. Say no to complexity and yes to smart, simple earning.
+                </p>
+            </div>
         </div>
-        <div className="mt-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => (
-            <Card key={feature.title} className="bg-background">
-              <CardHeader>
-                {feature.icon}
-                <CardTitle className="font-headline pt-4">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>{feature.description}</CardDescription>
-              </CardContent>
-            </Card>
-          ))}
+
+        <div className="space-y-8">
+            <div className="text-center max-w-2xl mx-auto">
+                <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                    Everything you need. Nothing you don&apos;t.
+                </h2>
+                <p className="mt-4 text-lg text-muted-foreground">
+                    From deep analytics to seamless mobile access, TaskVerse makes every task feel like a breeze.
+                </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {features.map((feature) => {
+                    const image = images.get(feature.id);
+                    return (
+                        <Card key={feature.id} className="bg-secondary/50 group overflow-hidden">
+                            <CardContent className="p-6">
+                                {image && (
+                                     <Image
+                                        src={image.imageUrl}
+                                        alt={image.description}
+                                        width={500}
+                                        height={400}
+                                        className="w-full rounded-lg mb-6 border border-white/10"
+                                        data-ai-hint={image.imageHint}
+                                    />
+                                )}
+                                <h3 className="font-headline text-xl font-semibold">{feature.title}</h3>
+                                <p className="mt-2 text-muted-foreground">{feature.description}</p>
+                                <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary">
+                                    <span>Learn more</span>
+                                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+            </div>
         </div>
       </div>
     </section>

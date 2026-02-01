@@ -13,21 +13,21 @@ export default function PublicHeader() {
           <nav className="flex items-center gap-6 text-sm">
             <Link
               href="/#features"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
-              How It Works
+              Features
             </Link>
             <Link
               href="/features"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
               Partners
             </Link>
             <Link
-              href="/#testimonials"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              href="/about"
+              className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
-              Testimonials
+              About
             </Link>
           </nav>
         </div>

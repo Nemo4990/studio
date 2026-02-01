@@ -37,10 +37,34 @@
       "imageHint": "person portrait"
     },
     {
-      "id": "partners_hero",
-      "description": "People in business suits holding celebration banners for TaskVerse.",
-      "imageUrl": "https://images.unsplash.com/photo-1758599543110-f9cf3903a2ad?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxidXNpbmVzcyUyMGNlbGVicmF0aW9ufGVufDB8fHx8MTc2OTcwMjA4N3ww&ixlib=rb-4.1.0&q=80&w=1080",
-      "imageHint": "business celebration"
+      "id": "hero_dashboard",
+      "description": "A screenshot of the TaskVerse dashboard UI, showing charts and metrics.",
+      "imageUrl": "https://images.unsplash.com/photo-1631093441315-a06b9bcbe63f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxkYXNoYm9hcmQlMjB1aXxlbnwwfHx8fDE3Njk5MDUxOTZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dashboard ui"
+    },
+    {
+      "id": "feature_insights",
+      "description": "A UI card showing insights at your fingertips.",
+      "imageUrl": "https://images.unsplash.com/photo-1748609622257-bb917eda4d14?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxhbmFseXRpY3MlMjBjaGFydHxlbnwwfHx8fDE3Njk5MjIwMTl8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "analytics chart"
+    },
+    {
+      "id": "feature_mobile",
+      "description": "A UI card showing management in real time on a mobile device.",
+      "imageUrl": "https://images.unsplash.com/photo-1512428559087-560fa5ceab42?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtb2JpbGUlMjBhcHB8ZW58MHx8fHwxNzY5OTEzODg5fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "mobile app"
+    },
+    {
+      "id": "feature_integrations",
+      "description": "A UI card showing various app integrations.",
+      "imageUrl": "https://images.unsplash.com/photo-1742197062761-556692fa58d8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxhcHAlMjBsb2dvc3xlbnwwfHx8fDE3Njk5MzgwNzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "app logos"
+    },
+    {
+      "id": "feature_keyboard",
+      "description": "A UI card showing keyboard shortcuts.",
+      "imageUrl": "https://images.unsplash.com/photo-1562319926-4dbdecfa9962?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxrZXlib2FyZCUyMHNob3J0Y3V0c3xlbnwwfHx8fDE3Njk5MzgwNzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "keyboard shortcuts"
     }
   ]
 }
