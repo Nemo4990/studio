@@ -48,12 +48,11 @@ service cloud.firestore {
     }
 
     /**
-     * Checks if the current user has the 'admin' role by reading their user profile.
-     * This requires a 'get' operation, which has security and performance implications.
-     * It works for standard queries but is NOT compatible with collection group queries.
+     * Checks if the current user has the 'admin' role by checking their email.
+     * This is safe to use in list queries.
      */
     function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && request.auth.token.email == 'admin@taskverse.io';
     }
 
     // -------------------------------------------------------------------------
@@ -93,7 +92,6 @@ service cloud.firestore {
      */
     match /submissions/{submissionId} {
       allow get: if isOwner(resource.data.userId) || isAdmin();
-      allow list: if isAdmin() || (request.query.where.size() > 0 && request.query.where.userId == request.auth.uid);
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
@@ -107,7 +105,6 @@ service cloud.firestore {
      */
     match /deposits/{depositId} {
       allow get: if isOwner(resource.data.userId) || isAdmin();
-      allow list: if isAdmin() || (request.query.where.size() > 0 && request.query.where.userId == request.auth.uid);
       allow create: if isOwner(request.resource.data.userId);
       allow update, delete: if isAdmin();
     }
@@ -121,7 +118,6 @@ service cloud.firestore {
      */
     match /withdrawals/{withdrawalId} {
         allow get: if isOwner(resource.data.userId) || isAdmin();
-        allow list: if isAdmin() || (request.query.where.size() > 0 && request.query.where.userId == request.auth.uid);
         allow create: if isOwner(request.resource.data.userId);
         allow update, delete: if isAdmin();
     }
