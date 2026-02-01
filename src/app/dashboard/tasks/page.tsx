@@ -145,6 +145,13 @@ export default function TasksPage() {
                 </Button>
             );
         }
+        if (task.id === '12') { // Memory Pattern Recall
+            return (
+                <Button className="w-full" asChild>
+                    <Link href="/dashboard/tasks/memory-pattern">Start Challenge</Link>
+                </Button>
+            );
+        }
         return (
           <Button
             className="w-full"
