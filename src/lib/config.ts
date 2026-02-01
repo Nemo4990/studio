@@ -89,7 +89,7 @@ export const adminNavItems: NavItem[] = [
 
 export const bottomNavItems: NavItem[] = [
   {
-    href: '#',
+    href: '/dashboard/settings',
     label: 'Settings',
     icon: Settings,
     role: 'user',
