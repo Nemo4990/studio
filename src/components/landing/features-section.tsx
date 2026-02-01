@@ -36,15 +36,18 @@ export default function FeaturesSection() {
     <section id="features" className="py-20 md:py-32">
       <div className="container space-y-24">
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center">
             <div className="max-w-md">
                 <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
                     Who said earning crypto has to be boring?
                 </h2>
             </div>
-            <div>
+            <div className="space-y-4">
                 <p className="text-lg text-muted-foreground">
-                    With TaskVerse, managing your crypto earnings is effortless, empowering, and even fun. We've simplified the process to give you the power of advanced financial management right at your fingertips. Say no to complexity and yes to smart, simple earning.
+                    TaskVerse transforms the daily grind into a captivating game. Dive into a world of interactive challenges, from speedmath duels to creative contests, and watch your crypto portfolio expand as you conquer each level.
+                </p>
+                <p className="text-lg text-muted-foreground">
+                    We believe that entering the world of digital assets should be accessible, transparent, and genuinely enjoyable. Forget complex charts and baffling jargon. Here, you just play, earn, and build your future in the digital economy.
                 </p>
             </div>
         </div>
