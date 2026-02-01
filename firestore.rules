@@ -37,6 +37,7 @@ service cloud.firestore {
     }
 
     function isAdmin() {
+      // In a real app, this would check a custom claim: request.auth.token.admin == true
       return isSignedIn() && request.auth.token.email == 'admin@taskverse.io';
     }
 
@@ -45,31 +46,48 @@ service cloud.firestore {
     // -------------------------------------------------------------------------
 
     match /users/{userId} {
-      allow get, update, create: if isOwner(userId) || isAdmin();
+      // This `get` rule is critical. It unblocks queries on all subcollections for the owner.
+      allow get: if isOwner(userId) || isAdmin();
+      // Only admins can list all users.
       allow list: if isAdmin();
+      // A user can create their own document on signup.
+      allow create: if isOwner(userId);
+      // A user can update their own profile, an admin can update any.
+      allow update: if isOwner(userId) || isAdmin();
+      // User documents cannot be deleted.
       allow delete: if false;
 
-      // User-private transaction history.
-      // Rules are extremely explicit to avoid query evaluation issues.
+      // --- User-Private Subcollections ---
+      
       match /deposits/{depositId} {
-        allow get: if request.auth.uid == userId || isAdmin();
-        allow list: if request.auth.uid == userId;
-        allow create: if request.auth.uid == userId;
-        allow update: if request.auth.uid == userId || isAdmin();
-        allow delete: if request.auth.uid == userId;
+        // This rule is for querying the user's own history. It must be simple.
+        allow list: if isOwner(userId);
+        // This rule allows direct access to a single doc by the user or an admin.
+        allow get: if isOwner(userId) || isAdmin();
+        // A user can create their own deposit record.
+        allow create: if isOwner(userId);
+        // An admin can update the status, and a user can update their own record if needed.
+        allow update: if isOwner(userId) || isAdmin();
+        // Only a user can delete their own record.
+        allow delete: if isOwner(userId);
       }
 
       match /withdrawals/{withdrawalId} {
-        allow get: if request.auth.uid == userId || isAdmin();
-        allow list: if request.auth.uid == userId;
-        allow create: if request.auth.uid == userId;
-        allow update: if request.auth.uid == userId || isAdmin();
-        allow delete: if request.auth.uid == userId;
+        // This rule is for querying the user's own history. It must be simple.
+        allow list: if isOwner(userId);
+        // This rule allows direct access to a single doc by the user or an admin.
+        allow get: if isOwner(userId) || isAdmin();
+        // A user can create their own withdrawal request.
+        allow create: if isOwner(userId);
+        // An admin can update the status, and a user can update their own request if needed.
+        allow update: if isOwner(userId) || isAdmin();
+        // Only a user can delete their own request.
+        allow delete: if isOwner(userId);
       }
       
       match /testimonials/{testimonialId} {
-        allow get, list: if request.auth.uid == userId;
-        allow create, update, delete: if request.auth.uid == userId;
+        // Testimonials are simpler and only need owner access.
+        allow read, write: if isOwner(userId);
       }
     }
 
