@@ -60,33 +60,28 @@ service cloud.firestore {
       // --- User-Private Subcollections ---
       
       match /deposits/{depositId} {
-        // This rule is for querying the user's own history. It must be simple.
+        // This is the simplest possible rule for a user's query.
         allow list: if isOwner(userId);
-        // This rule allows direct access to a single doc by the user or an admin.
+        
+        // These are for single-document operations.
         allow get: if isOwner(userId) || isAdmin();
-        // A user can create their own deposit record.
         allow create: if isOwner(userId);
-        // An admin can update the status, and a user can update their own record if needed.
-        allow update: if isOwner(userId) || isAdmin();
-        // Only a user can delete their own record.
+        allow update: if isAdmin(); // Only admin can update status
         allow delete: if isOwner(userId);
       }
 
       match /withdrawals/{withdrawalId} {
-        // This rule is for querying the user's own history. It must be simple.
+        // Simplest rule for user query.
         allow list: if isOwner(userId);
-        // This rule allows direct access to a single doc by the user or an admin.
+
+        // Single-document operations.
         allow get: if isOwner(userId) || isAdmin();
-        // A user can create their own withdrawal request.
         allow create: if isOwner(userId);
-        // An admin can update the status, and a user can update their own request if needed.
-        allow update: if isOwner(userId) || isAdmin();
-        // Only a user can delete their own request.
+        allow update: if isAdmin(); // Only admin can update status
         allow delete: if isOwner(userId);
       }
       
       match /testimonials/{testimonialId} {
-        // Testimonials are simpler and only need owner access.
         allow read, write: if isOwner(userId);
       }
     }
