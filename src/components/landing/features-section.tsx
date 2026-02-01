@@ -5,6 +5,7 @@ import {
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 const features = [
   {
@@ -62,8 +63,8 @@ export default function FeaturesSection() {
                 {features.map((feature) => {
                     const image = images.get(feature.id);
                     return (
-                        <Card key={feature.id} className="bg-secondary/50 group overflow-hidden">
-                            <CardContent className="p-6">
+                        <Card key={feature.id} className="bg-secondary/50 group overflow-hidden flex flex-col">
+                            <CardContent className="p-6 flex flex-col flex-grow">
                                 {image && (
                                      <Image
                                         src={image.imageUrl}
@@ -74,12 +75,14 @@ export default function FeaturesSection() {
                                         data-ai-hint={image.imageHint}
                                     />
                                 )}
-                                <h3 className="font-headline text-xl font-semibold">{feature.title}</h3>
-                                <p className="mt-2 text-muted-foreground">{feature.description}</p>
-                                <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-primary">
+                                <div className="flex-grow">
+                                    <h3 className="font-headline text-lg font-semibold">{feature.title}</h3>
+                                    <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+                                </div>
+                                <Link href="/features" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-primary">
                                     <span>Learn more</span>
                                     <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                                </div>
+                                </Link>
                             </CardContent>
                         </Card>
                     );
