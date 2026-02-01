@@ -21,7 +21,7 @@ export default function PublicHeader() {
               href="/features"
               className="transition-colors hover:text-foreground/80 text-muted-foreground"
             >
-              Partners
+              Market
             </Link>
             <Link
               href="/about"
