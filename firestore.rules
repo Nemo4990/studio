@@ -74,10 +74,10 @@ service cloud.firestore {
       /**
        * @description Stores deposit requests for a specific user.
        * @path /users/{userId}/deposits/{depositId}
-       * @allow A user can manage their own deposits. Admins can view for verification.
+       * @allow A user can manage their own deposits.
        */
       match /deposits/{depositId} {
-        allow get, list: if isOwner(userId) || isAdmin();
+        allow get, list: if isOwner(userId);
         allow create, update, delete: if isOwner(userId);
       }
 
@@ -87,7 +87,7 @@ service cloud.firestore {
        * @allow A user can manage their own withdrawal requests.
        */
       match /withdrawals/{withdrawalId} {
-        allow get, list: if isOwner(userId) || isAdmin();
+        allow get, list: if isOwner(userId);
         allow create, update, delete: if isOwner(userId);
       }
 
@@ -95,10 +95,9 @@ service cloud.firestore {
        * @description Stores testimonials provided by a specific user.
        * @path /users/{userId}/testimonials/{testimonialId}
        * @allow A user can manage their own testimonials.
-       * @deny A user cannot access another user's testimonials.
        */
       match /testimonials/{testimonialId} {
-        allow get, list: if isOwner(userId) || isAdmin();
+        allow get, list: if isOwner(userId);
         allow create, update, delete: if isOwner(userId);
       }
     }
@@ -129,7 +128,7 @@ service cloud.firestore {
     /**
      * @description Top-level collection for all deposit requests for admin view.
      * @path /deposits/{depositId}
-     * @allow Admins can read all deposits. Users can read their own.
+     * @allow Admins can read all deposits.
      */
     match /deposits/{depositId} {
       allow read, create, update, delete: if isAdmin();
@@ -138,7 +137,7 @@ service cloud.firestore {
     /**
      * @description Top-level collection for all withdrawal requests for admin view.
      * @path /withdrawals/{withdrawalId}
-     * @allow Admins can read all withdrawals. Users can read their own.
+     * @allow Admins can read all withdrawals.
      */
     match /withdrawals/{withdrawalId} {
        allow read, create, update, delete: if isAdmin();
