@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Check, X, FileText } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, doc, Timestamp, runTransaction, writeBatch } from "firebase/firestore";
 import type { Deposit, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -43,22 +43,64 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
         toast({ title: `Updating to ${newStatus}...` });
 
         const depositRef = doc(firestore, 'deposits', deposit.id);
+        const userDepositRef = doc(firestore, 'users', deposit.userId, 'deposits', deposit.id);
 
-        try {
-            await updateDoc(depositRef, { status: newStatus });
+        if (newStatus === 'confirmed') {
+            const userRef = doc(firestore, 'users', deposit.userId);
+            const COIN_TO_USD_RATE = 0.01; // 100 coins = $1
 
-            toast({
-                title: `Deposit ${newStatus}`,
-                description: `The deposit status has been updated.`,
-                variant: newStatus === 'failed' ? 'destructive' : 'default',
-            });
-        } catch (e) {
-            console.error("Update failed: ", e);
-            toast({
-                title: 'Update failed',
-                description: 'Could not update deposit status.',
-                variant: 'destructive',
-            });
+            try {
+                await runTransaction(firestore, async (transaction) => {
+                    const userDoc = await transaction.get(userRef);
+                    if (!userDoc.exists()) {
+                        throw new Error("User not found!");
+                    }
+                    
+                    const coinsToAdd = deposit.amount / COIN_TO_USD_RATE;
+                    const newBalance = (userDoc.data().walletBalance || 0) + coinsToAdd;
+                    const newLevel = (userDoc.data().level || 1) + 1;
+
+                    transaction.update(userRef, { 
+                        walletBalance: newBalance,
+                        level: newLevel,
+                    });
+                    transaction.update(depositRef, { status: 'confirmed' });
+                    transaction.update(userDepositRef, { status: 'confirmed' });
+                });
+                
+                toast({
+                    title: `Deposit Confirmed`,
+                    description: `User's balance and level have been updated.`,
+                });
+
+            } catch (e: any) {
+                console.error("Transaction failed: ", e);
+                toast({
+                    title: 'Update failed',
+                    description: e.message || 'Could not confirm deposit.',
+                    variant: 'destructive',
+                });
+            }
+        } else { // newStatus is 'failed'
+            try {
+                const batch = writeBatch(firestore);
+                batch.update(depositRef, { status: 'failed' });
+                batch.update(userDepositRef, { status: 'failed' });
+                await batch.commit();
+                
+                toast({
+                    title: `Deposit Failed`,
+                    description: `The deposit status has been updated.`,
+                    variant: 'destructive',
+                });
+            } catch (e: any) {
+                console.error("Update failed: ", e);
+                toast({
+                    title: 'Update failed',
+                    description: 'Could not update deposit status.',
+                    variant: 'destructive',
+                });
+            }
         }
     }
     

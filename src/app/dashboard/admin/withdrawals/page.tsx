@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, doc, Timestamp, runTransaction, writeBatch } from "firebase/firestore";
 import type { Withdrawal, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -42,23 +42,67 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
         toast({ title: `Updating to ${newStatus}...` });
 
         const withdrawalRef = doc(firestore, 'withdrawals', withdrawal.id);
+        const userWithdrawalRef = doc(firestore, 'users', withdrawal.userId, 'withdrawals', withdrawal.id);
         
-        try {
-            // Note: You might want to add a transaction to the user's wallet balance here if 'approved'
-            await updateDoc(withdrawalRef, { status: newStatus });
-            
-            toast({
-                title: `Withdrawal ${newStatus}`,
-                description: `The withdrawal status has been updated.`,
-                variant: newStatus === 'rejected' ? 'destructive' : 'default',
-            });
-        } catch (e) {
-            console.error("Update failed: ", e);
-            toast({
-                title: 'Update failed',
-                description: 'Could not update withdrawal status.',
-                variant: 'destructive',
-            });
+        if (newStatus === 'approved') {
+            const userRef = doc(firestore, 'users', withdrawal.userId);
+            const COIN_TO_USD_RATE = 0.01; // 100 coins = $1
+
+            try {
+                await runTransaction(firestore, async (transaction) => {
+                    const userDoc = await transaction.get(userRef);
+                    if (!userDoc.exists()) {
+                        throw new Error("User not found!");
+                    }
+
+                    const coinsToDeduct = withdrawal.amount / COIN_TO_USD_RATE;
+                    const currentBalance = userDoc.data().walletBalance || 0;
+
+                    if (currentBalance < coinsToDeduct) {
+                        throw new Error("Insufficient user balance.");
+                    }
+
+                    const newBalance = currentBalance - coinsToDeduct;
+
+                    transaction.update(userRef, { walletBalance: newBalance });
+                    transaction.update(withdrawalRef, { status: 'approved' });
+                    transaction.update(userWithdrawalRef, { status: 'approved' });
+                });
+
+                 toast({
+                    title: `Withdrawal Approved`,
+                    description: `User's balance has been updated.`,
+                });
+
+            } catch(e: any) {
+                console.error("Transaction failed: ", e);
+                toast({
+                    title: 'Approval failed',
+                    description: e.message || 'Could not approve withdrawal.',
+                    variant: 'destructive',
+                });
+            }
+
+        } else { // newStatus is 'rejected'
+            try {
+                const batch = writeBatch(firestore);
+                batch.update(withdrawalRef, { status: 'rejected' });
+                batch.update(userWithdrawalRef, { status: 'rejected' });
+                await batch.commit();
+                
+                toast({
+                    title: `Withdrawal Rejected`,
+                    description: `The withdrawal status has been updated.`,
+                    variant: 'destructive',
+                });
+            } catch (e: any) {
+                console.error("Update failed: ", e);
+                toast({
+                    title: 'Update failed',
+                    description: 'Could not update withdrawal status.',
+                    variant: 'destructive',
+                });
+            }
         }
     };
     
