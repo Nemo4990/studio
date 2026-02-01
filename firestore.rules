@@ -19,8 +19,6 @@
  * - Admin-Only Top-Level Collections: The top-level `/deposits`, `/withdrawals`, and `/submissions`
  *   collections are locked down for admin use (read, update, delete). A special `create` rule allows users
  *   to initiate a request by writing into this collection, but they cannot view or edit it afterward.
- * - Admin Privileges: The `isAdmin()` function grants global read/write access where needed, primarily for
- *   managing the top-level review collections and updating the status on a user's private record after a review.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -52,22 +50,26 @@ service cloud.firestore {
       allow delete: if false;
 
       // User-private transaction history.
+      // Rules are extremely explicit to avoid query evaluation issues.
       match /deposits/{depositId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isOwner(userId) || isAdmin();
-        allow delete: if isOwner(userId);
+        allow get: if request.auth.uid == userId || isAdmin();
+        allow list: if request.auth.uid == userId;
+        allow create: if request.auth.uid == userId;
+        allow update: if request.auth.uid == userId || isAdmin();
+        allow delete: if request.auth.uid == userId;
       }
 
       match /withdrawals/{withdrawalId} {
-        allow get, list: if isOwner(userId);
-        allow create: if isOwner(userId);
-        allow update: if isOwner(userId) || isAdmin();
-        allow delete: if isOwner(userId);
+        allow get: if request.auth.uid == userId || isAdmin();
+        allow list: if request.auth.uid == userId;
+        allow create: if request.auth.uid == userId;
+        allow update: if request.auth.uid == userId || isAdmin();
+        allow delete: if request.auth.uid == userId;
       }
       
       match /testimonials/{testimonialId} {
-        allow read, write: if isOwner(userId);
+        allow get, list: if request.auth.uid == userId;
+        allow create, update, delete: if request.auth.uid == userId;
       }
     }
 
