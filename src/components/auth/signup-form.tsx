@@ -43,7 +43,10 @@ export function SignupForm() {
         level: 1,
         walletBalance: 0,
         createdAt: serverTimestamp(),
-        avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`
+        avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`,
+        phoneNumber: '',
+        country: '',
+        state: '',
       };
       
       const userDocRef = doc(firestore, 'users', user.uid);

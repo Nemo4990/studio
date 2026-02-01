@@ -27,13 +27,20 @@ export default function SettingsPage() {
   const { toast } = useToast();
 
   const [name, setName] = useState(user?.name || '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber || '');
+  const [country, setCountry] = useState(user?.country || '');
+  const [state, setState] = useState(user?.state || '');
+  
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   
   // Keep local state in sync with fetched user data
   React.useEffect(() => {
     if (user) {
-      setName(user.name);
+      setName(user.name || '');
+      setPhoneNumber(user.phoneNumber || '');
+      setCountry(user.country || '');
+      setState(user.state || '');
     }
   }, [user]);
 
@@ -43,12 +50,13 @@ export default function SettingsPage() {
     setIsSavingProfile(true);
 
     const userDocRef = doc(firestore, 'users', user.id);
-    const newAvatarUrl = `https://picsum.photos/seed/${user.id}/${Date.now()}/40/40`;
-
+    
     try {
       await updateDoc(userDocRef, {
-        name: name,
-        avatarUrl: newAvatarUrl, // Simulate new avatar upload
+        name,
+        phoneNumber,
+        country,
+        state
       });
       toast({
         title: 'Profile Updated',
@@ -150,6 +158,20 @@ export default function SettingsPage() {
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" value={user.email} disabled />
                  <p className="text-xs text-muted-foreground">Your email address cannot be changed.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phoneNumber">Phone Number</Label>
+                <Input id="phoneNumber" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="Your phone number" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="country">Country</Label>
+                    <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} placeholder="e.g. Nigeria" />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="state">State/Province</Label>
+                    <Input id="state" value={state} onChange={(e) => setState(e.target.value)} placeholder="e.g. Lagos" />
+                </div>
               </div>
             </CardContent>
             <CardFooter>

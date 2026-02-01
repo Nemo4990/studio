@@ -16,9 +16,9 @@
           "description": "Email address of the user.",
           "format": "email"
         },
-        "username": {
+        "name": {
           "type": "string",
-          "description": "Username of the user."
+          "description": "Full name of the user."
         },
         "level": {
           "type": "number",
@@ -32,12 +32,24 @@
           "type": "string",
           "description": "Timestamp of the last daily check-in claim.",
           "format": "date-time"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "User's phone number."
+        },
+        "country": {
+          "type": "string",
+          "description": "User's country of residence."
+        },
+        "state": {
+          "type": "string",
+          "description": "User's state or province."
         }
       },
       "required": [
         "id",
         "email",
-        "username",
+        "name",
         "level",
         "walletBalance"
       ]

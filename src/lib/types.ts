@@ -10,6 +10,9 @@ export type User = {
   walletBalance: number;
   createdAt: Date;
   lastDailyCheckin?: any;
+  phoneNumber?: string;
+  country?: string;
+  state?: string;
 };
 
 export type Testimonial = {
@@ -77,8 +80,8 @@ export type NavItem = {
 export type TaskSubmission = {
   id: string;
   userId: string;
-  taskId: string;
   user: Pick<User, 'name' | 'avatarUrl' | 'email'>;
+  taskId: string;
   taskTitle: string;
   submittedAt: any;
   status: 'pending' | 'approved' | 'rejected';

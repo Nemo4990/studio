@@ -12,13 +12,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Table,
   TableBody,
   TableCell,
@@ -49,6 +42,7 @@ import {
   Timestamp,
   writeBatch,
 } from 'firebase/firestore';
+import Link from 'next/link';
 
 type Transaction = (
   | ({ type: 'deposit' } & Deposit)
@@ -62,7 +56,6 @@ export default function WalletPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
 
-  const [selectedCountry, setSelectedCountry] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
 
@@ -77,10 +70,13 @@ export default function WalletPage() {
   const agentsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'agents') : null, [firestore]);
   const { data: agents, isLoading: agentsLoading } = useCollection<Agent>(agentsQuery);
 
-  const countries = useMemo(() => agents ? [...new Set(agents.map((agent) => agent.country))] : [], [agents]);
-  const filteredAgents = useMemo(() => agents?.filter(
-    (agent) => agent.country === selectedCountry
-  ) || [], [agents, selectedCountry]);
+  const filteredAgents = useMemo(() => {
+    if (!user?.country || !agents) {
+        return [];
+    }
+    return agents.filter((agent) => agent.country === user.country);
+  }, [agents, user?.country]);
+
 
   const maxWithdrawalAmount = user ? (user.level || 1) * 100 : 0;
   const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
@@ -149,7 +145,7 @@ export default function WalletPage() {
   };
 
   const handleDepositSubmit = async () => {
-    if (!user || !firestore || !selectedAgent || !depositAmount) {
+    if (!user || !user.country || !firestore || !selectedAgent || !depositAmount) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
@@ -179,7 +175,7 @@ export default function WalletPage() {
       agentId: selectedAgent.id,
       agentName: selectedAgent.name,
       amount: amount,
-      currency: getCurrencyForCountry(selectedAgent.country),
+      currency: getCurrencyForCountry(user.country),
       status: 'pending' as const,
       proofOfPayment: 'https://example.com/placeholder-proof.png', // Placeholder proof
       createdAt: serverTimestamp(),
@@ -204,7 +200,6 @@ export default function WalletPage() {
       });
       setDepositAmount('');
       setSelectedAgent(null);
-      setSelectedCountry('');
     } catch (error) {
        console.error("Deposit submission failed:", error);
        toast({
@@ -303,114 +298,117 @@ export default function WalletPage() {
             <CardHeader>
               <CardTitle className="font-headline">Make a Deposit</CardTitle>
               <CardDescription>
-                Select your country to see available local agents for deposits. Approved deposits will be converted to Coins.
+                Agents for your country are shown below. Approved deposits will be converted to Coins.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
-                <Select
-                  onValueChange={(value) => {
-                    setSelectedCountry(value);
-                    setSelectedAgent(null);
-                  }}
-                  value={selectedCountry}
-                  disabled={agentsLoading}
-                >
-                  <SelectTrigger id="country">
-                    <SelectValue placeholder={agentsLoading ? "Loading countries..." : "Select a country"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {countries.map((country) => (
-                      <SelectItem key={country} value={country}>
-                        {country}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedCountry && (
-                <div>
-                  <Label>Available Agents</Label>
-                  <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredAgents.map((agent) => (
-                      <Card
-                        key={agent.id}
-                        className={cn(
-                          'cursor-pointer',
-                          selectedAgent?.id === agent.id &&
-                            'border-primary ring-2 ring-primary'
-                        )}
-                        onClick={() => setSelectedAgent(agent)}
-                      >
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2 text-lg">
-                            <Banknote className="size-5" /> {agent.name}
-                          </CardTitle>
-                          <CardDescription>{agent.country}</CardDescription>
-                        </CardHeader>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectedAgent && (
-                <Card className="bg-secondary">
-                  <CardHeader>
-                    <CardTitle>Deposit to {selectedAgent.name}</CardTitle>
-                    <CardDescription>
-                      Make your deposit to the account below and upload proof of
-                      payment.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-1">
-                      <Label>Bank Name</Label>
-                      <p className="font-semibold">{selectedAgent.bankName}</p>
+               {user && !user.country ? (
+                <Card className="border-dashed border-2 p-6 text-center bg-secondary">
+                    <CardTitle className="text-xl font-headline">Please Set Your Country</CardTitle>
+                    <CardDescription className="mt-2">To see available deposit agents, please add your country to your profile.</CardDescription>
+                    <Button asChild className="mt-4">
+                        <Link href="/dashboard/settings">Go to Settings</Link>
+                    </Button>
+                </Card>
+              ) : (
+                <>
+                  {agentsLoading && <p>Loading agents...</p>}
+                  {!agentsLoading && user?.country && (
+                    <div>
+                      <Label className="text-muted-foreground">Showing agents for:</Label>
+                      <p className="font-bold text-lg">{user.country}</p>
                     </div>
-                    <div className="space-y-1">
-                      <Label>Account Number</Label>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold font-mono">
-                          {selectedAgent.accountNumber}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7"
-                          onClick={() =>
-                            handleCopy(selectedAgent.accountNumber)
-                          }
-                        >
-                          <Copy className="size-4" />
-                        </Button>
+                  )}
+
+                  {!agentsLoading && filteredAgents.length > 0 && (
+                    <div>
+                      <Label>Available Agents</Label>
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {filteredAgents.map((agent) => (
+                          <Card
+                            key={agent.id}
+                            className={cn(
+                              'cursor-pointer',
+                              selectedAgent?.id === agent.id &&
+                                'border-primary ring-2 ring-primary'
+                            )}
+                            onClick={() => setSelectedAgent(agent)}
+                          >
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2 text-lg">
+                                <Banknote className="size-5" /> {agent.name}
+                              </CardTitle>
+                              <CardDescription>{agent.country}</CardDescription>
+                            </CardHeader>
+                          </Card>
+                        ))}
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="deposit-amount">Amount ({getCurrencyForCountry(selectedAgent.country)})</Label>
-                      <Input
-                        id="deposit-amount"
-                        type="number"
-                        placeholder="Enter amount"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                      />
+                  )}
+
+                  {!agentsLoading && user?.country && filteredAgents.length === 0 && (
+                    <div className="text-center text-muted-foreground p-4 border rounded-lg">
+                      <p>No deposit agents are currently available for {user.country}.</p>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="proof">Proof of Payment</Label>
-                      <Input id="proof" type="file" />
-                    </div>
-                    <Button
-                      className="w-full"
-                      onClick={handleDepositSubmit}
-                      disabled={loading}
-                    >
-                      {loading ? 'Submitting...' : 'Submit Deposit Request'}
-                    </Button>
-                  </CardContent>
-                </Card>
+                  )}
+                  
+                  {selectedAgent && (
+                    <Card className="bg-secondary">
+                      <CardHeader>
+                        <CardTitle>Deposit to {selectedAgent.name}</CardTitle>
+                        <CardDescription>
+                          Make your deposit to the account below and upload proof of
+                          payment.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-1">
+                          <Label>Bank Name</Label>
+                          <p className="font-semibold">{selectedAgent.bankName}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Account Number</Label>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold font-mono">
+                              {selectedAgent.accountNumber}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              onClick={() =>
+                                handleCopy(selectedAgent.accountNumber)
+                              }
+                            >
+                              <Copy className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="deposit-amount">Amount ({getCurrencyForCountry(selectedAgent.country)})</Label>
+                          <Input
+                            id="deposit-amount"
+                            type="number"
+                            placeholder="Enter amount"
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="proof">Proof of Payment</Label>
+                          <Input id="proof" type="file" />
+                        </div>
+                        <Button
+                          className="w-full"
+                          onClick={handleDepositSubmit}
+                          disabled={loading}
+                        >
+                          {loading ? 'Submitting...' : 'Submit Deposit Request'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
