@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, runTransaction, Timestamp } from "firebase/firestore";
+import { collection, doc, updateDoc, Timestamp } from "firebase/firestore";
 import type { Withdrawal, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -41,16 +41,11 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
         if (!firestore) return;
         toast({ title: `Updating to ${newStatus}...` });
 
-        // Refs for the two documents that need to be updated
-        const adminWithdrawalRef = doc(firestore, 'withdrawals', withdrawal.id);
-        const userWithdrawalRef = doc(firestore, 'users', withdrawal.userId, 'withdrawals', withdrawal.id);
+        const withdrawalRef = doc(firestore, 'withdrawals', withdrawal.id);
         
         try {
-            await runTransaction(firestore, async (transaction) => {
-              // Note: You might want to add a transaction to the user's wallet balance here if 'approved'
-              transaction.update(adminWithdrawalRef, { status: newStatus });
-              transaction.update(userWithdrawalRef, { status: newStatus });
-            });
+            // Note: You might want to add a transaction to the user's wallet balance here if 'approved'
+            await updateDoc(withdrawalRef, { status: newStatus });
             
             toast({
                 title: `Withdrawal ${newStatus}`,
@@ -58,7 +53,7 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
                 variant: newStatus === 'rejected' ? 'destructive' : 'default',
             });
         } catch (e) {
-            console.error("Transaction failed: ", e);
+            console.error("Update failed: ", e);
             toast({
                 title: 'Update failed',
                 description: 'Could not update withdrawal status.',

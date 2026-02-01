@@ -40,7 +40,7 @@ import {
   query,
   orderBy,
   Timestamp,
-  writeBatch,
+  where,
 } from 'firebase/firestore';
 import Link from 'next/link';
 
@@ -82,12 +82,13 @@ export default function WalletPage() {
   const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
 
 
-  // Query user's private subcollection for their history
+  // Query top-level collections for user's history
   const depositsQuery = useMemoFirebase(
     () =>
       user && firestore
         ? query(
-            collection(firestore, 'users', user.id, 'deposits'),
+            collection(firestore, 'deposits'),
+            where('userId', '==', user.id),
             orderBy('createdAt', 'desc')
           )
         : null,
@@ -100,7 +101,8 @@ export default function WalletPage() {
     () =>
       user && firestore
         ? query(
-            collection(firestore, 'users', user.id, 'withdrawals'),
+            collection(firestore, 'withdrawals'),
+            where('userId', '==', user.id),
             orderBy('requestedAt', 'desc')
           )
         : null,
@@ -166,11 +168,10 @@ export default function WalletPage() {
       return;
     }
     
-    // Generate a single ID for both documents
-    const depositId = doc(collection(firestore, 'users')).id;
+    const depositRef = doc(collection(firestore, 'deposits'));
 
     const depositData = {
-      id: depositId,
+      id: depositRef.id,
       userId: user.id,
       agentId: selectedAgent.id,
       agentName: selectedAgent.name,
@@ -181,19 +182,8 @@ export default function WalletPage() {
       createdAt: serverTimestamp(),
     };
     
-    // Create a batch to write to both locations atomically
-    const batch = writeBatch(firestore);
-
-    // 1. Write to the user's private subcollection
-    const userDepositRef = doc(firestore, 'users', user.id, 'deposits', depositId);
-    batch.set(userDepositRef, depositData);
-
-    // 2. Write to the top-level admin collection
-    const adminDepositRef = doc(firestore, 'deposits', depositId);
-    batch.set(adminDepositRef, depositData);
-    
     try {
-      await batch.commit();
+      await setDoc(depositRef, depositData);
       toast({
         title: 'Deposit Request Submitted!',
         description: 'Your request is pending admin approval.',
@@ -236,10 +226,10 @@ export default function WalletPage() {
       return;
     }
 
-    const withdrawalId = doc(collection(firestore, 'users')).id;
+    const withdrawalRef = doc(collection(firestore, 'withdrawals'));
 
     const withdrawalData = {
-      id: withdrawalId,
+      id: withdrawalRef.id,
       userId: user.id,
       amount: amount,
       currency: 'USD',
@@ -248,18 +238,8 @@ export default function WalletPage() {
       requestedAt: serverTimestamp(),
     };
 
-    const batch = writeBatch(firestore);
-
-    // 1. Write to user's private subcollection
-    const userWithdrawalRef = doc(firestore, 'users', user.id, 'withdrawals', withdrawalId);
-    batch.set(userWithdrawalRef, withdrawalData);
-
-    // 2. Write to top-level admin collection
-    const adminWithdrawalRef = doc(firestore, 'withdrawals', withdrawalId);
-    batch.set(adminWithdrawalRef, withdrawalData);
-
     try {
-      await batch.commit();
+      await setDoc(withdrawalRef, withdrawalData);
       toast({
         title: 'Withdrawal Request Submitted!',
         description: 'Your request is pending admin approval.',

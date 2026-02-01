@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Check, X, FileText } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, runTransaction, Timestamp } from "firebase/firestore";
+import { collection, doc, updateDoc, Timestamp } from "firebase/firestore";
 import type { Deposit, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -42,25 +42,18 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
         if (!firestore) return;
         toast({ title: `Updating to ${newStatus}...` });
 
-        // Refs for the two documents that need to be updated
-        const adminDepositRef = doc(firestore, 'deposits', deposit.id);
-        const userDepositRef = doc(firestore, 'users', deposit.userId, 'deposits', deposit.id);
+        const depositRef = doc(firestore, 'deposits', deposit.id);
 
         try {
-            await runTransaction(firestore, async (transaction) => {
-                // Update the document in the top-level admin collection
-                transaction.update(adminDepositRef, { status: newStatus });
-                // Update the document in the user's private subcollection
-                transaction.update(userDepositRef, { status: newStatus });
-            });
+            await updateDoc(depositRef, { status: newStatus });
 
             toast({
                 title: `Deposit ${newStatus}`,
-                description: `The deposit status has been updated in both collections.`,
+                description: `The deposit status has been updated.`,
                 variant: newStatus === 'failed' ? 'destructive' : 'default',
             });
         } catch (e) {
-            console.error("Transaction failed: ", e);
+            console.error("Update failed: ", e);
             toast({
                 title: 'Update failed',
                 description: 'Could not update deposit status.',

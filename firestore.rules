@@ -15,33 +15,13 @@ service cloud.firestore {
       // User documents cannot be deleted.
       allow delete: if false;
     }
-
-    // --- Subcollections defined at the top level for rule evaluation clarity ---
-
-    match /users/{userId}/deposits/{depositId} {
-      // User permissions
-      allow get, list, create: if request.auth.uid == userId;
-      // Admin permissions
-      allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      // No one can delete
-      allow delete: if false;
-    }
-
-    match /users/{userId}/withdrawals/{withdrawalId} {
-      // User permissions
-      allow get, list, create: if request.auth.uid == userId;
-      // Admin permissions
-      allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      // No one can delete
-      allow delete: if false;
-    }
     
     match /users/{userId}/testimonials/{testimonialId} {
       // A user can fully manage their own testimonials.
       allow read, write: if request.auth.uid == userId;
     }
 
-    // --- Top-level Admin Collections ---
+    // --- Top-level Collections ---
 
     match /tasks/{taskId} {
       allow read: if request.auth != null;
@@ -54,13 +34,17 @@ service cloud.firestore {
     }
     
     match /deposits/{depositId} {
-       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-       allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Admins can manage everything. Users can read their own.
+      allow read: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth.uid == resource.data.userId);
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
     match /withdrawals/{withdrawalId} {
-       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-       allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Admins can manage everything. Users can read their own.
+      allow read: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth.uid == resource.data.userId);
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
     match /agents/{agentId} {
@@ -68,8 +52,5 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
-    match /wallets/{walletId} {
-      allow read, write: if false;
-    }
   }
 }
