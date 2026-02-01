@@ -92,6 +92,10 @@ export default {
           from: { transform: 'translateX(0)' },
           to: { transform: 'translateX(-100%)' },
         },
+        'vertical-scroll': {
+          from: { transform: 'translateY(0)' },
+          to: { transform: 'translateY(-50%)' },
+        },
         'fade-in-up': {
           '0%': {
             opacity: '0',
@@ -107,6 +111,7 @@ export default {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'infinite-scroll': 'infinite-scroll 40s linear infinite',
+        'vertical-scroll': 'vertical-scroll 40s linear infinite',
         'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
       },
     },
