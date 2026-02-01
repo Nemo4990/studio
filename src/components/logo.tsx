@@ -13,7 +13,7 @@ export function Logo({ className }: { className?: string }) {
         alt="TaskVerse Logo"
         width={250} // Intrinsic width of the logo image for aspect ratio.
         height={250} // Intrinsic height of the logo image for aspect ratio.
-        className={cn('h-10 w-auto', className)} // Default display size is 40px height.
+        className={cn('h-12 w-auto', className)} // Default display size is 48px height.
         priority // Logos are usually important for LCP.
     />
   );
