@@ -38,16 +38,16 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
-  errorEmitter,
-  FirestorePermissionError,
 } from '@/firebase';
 import {
   collection,
-  addDoc,
+  doc,
+  setDoc,
   serverTimestamp,
   query,
   orderBy,
   Timestamp,
+  writeBatch,
 } from 'firebase/firestore';
 
 type Transaction = (
@@ -86,6 +86,7 @@ export default function WalletPage() {
   const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
 
 
+  // Query user's private subcollection for their history
   const depositsQuery = useMemoFirebase(
     () =>
       user && firestore
@@ -147,7 +148,7 @@ export default function WalletPage() {
     return 'USD';
   };
 
-  const handleDepositSubmit = () => {
+  const handleDepositSubmit = async () => {
     if (!user || !firestore || !selectedAgent || !depositAmount) {
       toast({
         variant: 'destructive',
@@ -168,153 +169,122 @@ export default function WalletPage() {
       setLoading(false);
       return;
     }
+    
+    // Generate a single ID for both documents
+    const depositId = doc(collection(firestore, 'users')).id;
 
     const depositData = {
+      id: depositId,
       userId: user.id,
       agentId: selectedAgent.id,
       agentName: selectedAgent.name,
       amount: amount,
       currency: getCurrencyForCountry(selectedAgent.country),
-      status: 'pending',
+      status: 'pending' as const,
       proofOfPayment: 'https://example.com/placeholder-proof.png', // Placeholder proof
       createdAt: serverTimestamp(),
     };
+    
+    // Create a batch to write to both locations atomically
+    const batch = writeBatch(firestore);
 
-    const depositsRef = collection(firestore, 'users', user.id, 'deposits');
+    // 1. Write to the user's private subcollection
+    const userDepositRef = doc(firestore, 'users', user.id, 'deposits', depositId);
+    batch.set(userDepositRef, depositData);
 
-    addDoc(depositsRef, depositData)
-      .then(() => {
-        toast({
-          title: 'Deposit Request Submitted!',
-          description: 'Your request is pending admin approval.',
-        });
-        setDepositAmount('');
-        setSelectedAgent(null);
-        setSelectedCountry('');
-      })
-      .catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: depositsRef.path,
-          operation: 'create',
-          requestResourceData: depositData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-
-        toast({
-          variant: 'destructive',
-          title: 'Submission Failed',
-          description:
-            'There was a problem submitting your request. Please try again.',
-        });
-      })
-      .finally(() => {
-        setLoading(false);
+    // 2. Write to the top-level admin collection
+    const adminDepositRef = doc(firestore, 'deposits', depositId);
+    batch.set(adminDepositRef, depositData);
+    
+    try {
+      await batch.commit();
+      toast({
+        title: 'Deposit Request Submitted!',
+        description: 'Your request is pending admin approval.',
       });
+      setDepositAmount('');
+      setSelectedAgent(null);
+      setSelectedCountry('');
+    } catch (error) {
+       console.error("Deposit submission failed:", error);
+       toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: 'There was a problem submitting your request. Please check security rules and try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleWithdrawalSubmit = () => {
-    if (
-      !user ||
-      !firestore ||
-      !withdrawalAmount ||
-      !bankName ||
-      !accountNumber ||
-      !accountName
-    ) {
-      toast({
-        variant: 'destructive',
-        title: 'Missing Information',
-        description: 'Please fill out all fields for the withdrawal request.',
-      });
+  const handleWithdrawalSubmit = async () => {
+    if (!user || !firestore || !withdrawalAmount || !bankName || !accountNumber || !accountName) {
+      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.' });
       return;
     }
     setLoading(true);
 
     const amount = parseFloat(withdrawalAmount);
-
     if (isNaN(amount) || amount <= 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Invalid Amount',
-        description: 'Please enter a valid withdrawal amount.',
-      });
+      toast({ variant: 'destructive', title: 'Invalid Amount' });
       setLoading(false);
       return;
     }
-
     if (amount > userBalanceInUSD) {
-      toast({
-        variant: 'destructive',
-        title: 'Insufficient Balance',
-        description: `Your wallet balance is only $${userBalanceInUSD.toFixed(2)}.`,
-      });
+      toast({ variant: 'destructive', title: 'Insufficient Balance' });
+      setLoading(false);
+      return;
+    }
+    if (amount > maxWithdrawalAmount) {
+      toast({ variant: 'destructive', title: 'Withdrawal Limit Exceeded' });
       setLoading(false);
       return;
     }
 
-    if (amount > maxWithdrawalAmount) {
-      toast({
-        variant: 'destructive',
-        title: 'Withdrawal Limit Exceeded',
-        description: `Your current level allows a maximum withdrawal of $${maxWithdrawalAmount.toFixed(
-          2
-        )}.`,
-      });
-      setLoading(false);
-      return;
-    }
+    const withdrawalId = doc(collection(firestore, 'users')).id;
 
     const withdrawalData = {
+      id: withdrawalId,
       userId: user.id,
       amount: amount,
       currency: 'USD',
-      userBankInfo: {
-        bankName,
-        accountNumber,
-        accountName,
-      },
-      status: 'pending',
+      userBankInfo: { bankName, accountNumber, accountName },
+      status: 'pending' as const,
       requestedAt: serverTimestamp(),
     };
 
-    const withdrawalsRef = collection(
-      firestore,
-      'users',
-      user.id,
-      'withdrawals'
-    );
+    const batch = writeBatch(firestore);
 
-    addDoc(withdrawalsRef, withdrawalData)
-      .then(() => {
-        toast({
-          title: 'Withdrawal Request Submitted!',
-          description: 'Your request is pending admin approval.',
-        });
-        // Reset fields
-        setWithdrawalAmount('');
-        setBankName('');
-        setAccountNumber('');
-        setAccountName('');
-      })
-      .catch((serverError) => {
-        const permissionError = new FirestorePermissionError({
-          path: withdrawalsRef.path,
-          operation: 'create',
-          requestResourceData: withdrawalData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+    // 1. Write to user's private subcollection
+    const userWithdrawalRef = doc(firestore, 'users', user.id, 'withdrawals', withdrawalId);
+    batch.set(userWithdrawalRef, withdrawalData);
 
-        toast({
-          variant: 'destructive',
-          title: 'Submission Failed',
-          description:
-            'There was a problem submitting your request. Please try again.',
-        });
-      })
-      .finally(() => {
-        setLoading(false);
+    // 2. Write to top-level admin collection
+    const adminWithdrawalRef = doc(firestore, 'withdrawals', withdrawalId);
+    batch.set(adminWithdrawalRef, withdrawalData);
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'Withdrawal Request Submitted!',
+        description: 'Your request is pending admin approval.',
       });
+      setWithdrawalAmount('');
+      setBankName('');
+      setAccountNumber('');
+      setAccountName('');
+    } catch (error) {
+      console.error("Withdrawal submission failed:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Submission Failed',
+        description: 'There was a problem submitting your request. Please check security rules and try again.',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
+
 
   return (
     <>

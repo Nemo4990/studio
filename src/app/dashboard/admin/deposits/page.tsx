@@ -9,16 +9,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Check, X, FileText } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, updateDoc } from "firebase/firestore";
+import { collection, doc, runTransaction, Timestamp } from "firebase/firestore";
 import type { Deposit, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
-import { Timestamp } from "firebase/firestore";
 
 function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
+    // Query the top-level 'deposits' collection for admin review
     const depositsQuery = useMemoFirebase(
         () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'deposits') : null,
         [firestore, adminUser]
@@ -38,19 +38,29 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
 
     const getUserById = (id: string) => usersMap.get(id);
     
-    const handleStatusChange = async (depositId: string, newStatus: 'confirmed' | 'failed') => {
+    const handleStatusChange = async (deposit: Deposit, newStatus: 'confirmed' | 'failed') => {
         if (!firestore) return;
+        toast({ title: `Updating to ${newStatus}...` });
 
-        const depositRef = doc(firestore, 'deposits', depositId);
+        // Refs for the two documents that need to be updated
+        const adminDepositRef = doc(firestore, 'deposits', deposit.id);
+        const userDepositRef = doc(firestore, 'users', deposit.userId, 'deposits', deposit.id);
+
         try {
-            await updateDoc(depositRef, { status: newStatus });
+            await runTransaction(firestore, async (transaction) => {
+                // Update the document in the top-level admin collection
+                transaction.update(adminDepositRef, { status: newStatus });
+                // Update the document in the user's private subcollection
+                transaction.update(userDepositRef, { status: newStatus });
+            });
+
             toast({
                 title: `Deposit ${newStatus}`,
-                description: `The deposit status has been updated.`,
+                description: `The deposit status has been updated in both collections.`,
                 variant: newStatus === 'failed' ? 'destructive' : 'default',
             });
         } catch (e) {
-            console.error(e);
+            console.error("Transaction failed: ", e);
             toast({
                 title: 'Update failed',
                 description: 'Could not update deposit status.',
@@ -121,8 +131,8 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
                                     <TableCell>
                                         {deposit.status === 'pending' && (
                                             <div className="flex gap-2">
-                                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleStatusChange(deposit.id, 'confirmed')}><Check className="size-4" /></Button>
-                                                <Button size="icon" variant="destructive-outline" className="h-8 w-8" onClick={() => handleStatusChange(deposit.id, 'failed')}><X className="size-4" /></Button>
+                                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleStatusChange(deposit, 'confirmed')}><Check className="size-4" /></Button>
+                                                <Button size="icon" variant="destructive-outline" className="h-8 w-8" onClick={() => handleStatusChange(deposit, 'failed')}><X className="size-4" /></Button>
                                             </div>
                                         )}
                                     </TableCell>

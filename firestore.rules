@@ -1,20 +1,26 @@
 /**
- * Core Philosophy: This ruleset enforces a strict user-ownership model. All sensitive user-specific data
- * is nested within that user's own document tree, ensuring that a user can only ever access their own information.
- * Publicly readable data is segregated into top-level collections with write access locked down.
+ * Core Philosophy: This ruleset enforces a strict user-ownership model for user-specific data,
+ * while providing admins with access to top-level collections for platform-wide management.
+ * This dual-structure ensures both security and query efficiency.
  *
- * Data Structure: The data is organized hierarchically. A top-level `/users/{userId}` collection holds user profiles.
- * All related private data, such as deposits, withdrawals, and testimonials, are stored in subcollections
- * under the corresponding user's document (e.g., `/users/{userId}/deposits/{depositId}`). This structure makes
- * ownership-based security rules simple and performant. Public data (tasks) and platform-wide data (submissions)
- * reside in their own top-level collections.
+ * Data Structure:
+ * - User-Private Data: `/users/{userId}` contains user profiles. All personal transaction history
+ *   (deposits, withdrawals, testimonials) is stored in subcollections (e.g., `/users/{userId}/deposits/{depositId}`).
+ *   This ensures a user can only access their own information through simple, secure path-based rules.
+ * - Admin-Viewable Data: Top-level collections like `/deposits`, `/withdrawals`, and `/submissions`
+ *   mirror the user-created data. This allows admins to query all requests across the platform efficiently
+ *   without needing expensive collection group scans. Users can write to these collections on creation, but cannot read them.
  *
  * Key Security Decisions:
- * - User Enumeration Disabled: Listing documents in the top-level `/users` collection is disallowed to prevent exposing the user base, except for admins.
- * - Strict Ownership: All user-specific subcollections are strictly controlled. Only the authenticated user matching `{userId}` can read or write their own documents.
- * - Admin Access: An `isAdmin()` function, which checks for a `role == 'admin'` field on the user's profile, grants privileged access to read/write data across the platform, such as viewing all users or managing all submissions.
- * - Top-Level Submissions: The `/submissions` collection is at the top level to allow admins to query all submissions efficiently without running into collection group query limitations. User access is restricted to their own submissions via query constraints.
- * - Relational Integrity: On document creation, rules ensure that internal ID fields (like `userId`) match the document's path or the user's auth UID, creating a secure and consistent link.
+ * - Dual-Write Model: The application client writes transaction data to two places: the user's private subcollection
+ *   and the admin's top-level review collection. This separation is key to the security model.
+ * - Strict Ownership on Subcollections: The `/users/{userId}` path is the cornerstone of user security.
+ *   Rules like `isOwner(userId)` ensure only the authenticated user matching the path can access their own data.
+ * - Admin-Only Top-Level Collections: The top-level `/deposits`, `/withdrawals`, and `/submissions`
+ *   collections are locked down for admin use (read, update, delete). A special `create` rule allows users
+ *   to initiate a request by writing into this collection, but they cannot view or edit it afterward.
+ * - Admin Privileges: The `isAdmin()` function grants global read/write access where needed, primarily for
+ *   managing the top-level review collections and updating the status on a user's private record after a review.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -24,33 +30,14 @@ service cloud.firestore {
     // Helper Functions
     // -------------------------------------------------------------------------
 
-    /**
-     * Checks if the user is authenticated.
-     */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the currently authenticated user's UID matches the provided userId.
-     * This is the primary function for enforcing document ownership.
-     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
-    
-    /**
-     * Checks if a document exists and if the requester is the owner.
-     * Used for secure update and delete operations.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
 
-    /**
-     * Checks if the current user has the 'admin' role by checking their email.
-     * This is safe to use in list queries.
-     */
     function isAdmin() {
       return isSignedIn() && request.auth.token.email == 'admin@taskverse.io';
     }
@@ -59,105 +46,57 @@ service cloud.firestore {
     // Collection Rules
     // -------------------------------------------------------------------------
 
-    /**
-     * @description Manages user profile documents and their subcollections.
-     * @path /users/{userId}
-     * @allow A user reads or updates their own profile. An admin can read any profile.
-     * @deny Any non-admin user tries to list all users.
-     */
     match /users/{userId} {
-      allow get, update: if isOwner(userId) || isAdmin();
+      allow get, update, create: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
-      allow create: if isOwner(userId);
-      allow delete: if false; // Deleting user accounts is a sensitive operation, disabled by default.
-      
-      /**
-       * @description Stores deposit requests for a specific user.
-       * @path /users/{userId}/deposits/{depositId}
-       * @allow A user can manage their own deposits.
-       */
+      allow delete: if false;
+
+      // User-private transaction history. Only the user can create and read.
+      // Admin can update status after review.
       match /deposits/{depositId} {
-        allow get, list: if isOwner(userId);
-        allow create, update, delete: if isOwner(userId);
+        allow get, list, create: if isOwner(userId);
+        allow update, delete: if isOwner(userId) || isAdmin();
       }
 
-      /**
-       * @description Stores withdrawal requests for a specific user.
-       * @path /users/{userId}/withdrawals/{withdrawalId}
-       * @allow A user can manage their own withdrawal requests.
-       */
       match /withdrawals/{withdrawalId} {
-        allow get, list: if isOwner(userId);
-        allow create, update, delete: if isOwner(userId);
+        allow get, list, create: if isOwner(userId);
+        allow update, delete: if isOwner(userId) || isAdmin();
       }
-
-      /**
-       * @description Stores testimonials provided by a specific user.
-       * @path /users/{userId}/testimonials/{testimonialId}
-       * @allow A user can manage their own testimonials.
-       */
+      
       match /testimonials/{testimonialId} {
-        allow get, list: if isOwner(userId);
-        allow create, update, delete: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
     }
 
-    /**
-     * @description Stores tasks that are publicly available on the platform.
-     * @path /tasks/{taskId}
-     * @allow Any user can read the list of tasks.
-     * @deny Any client-side user tries to write to the tasks collection.
-     */
     match /tasks/{taskId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow read: if true;
+      allow write: if isAdmin();
     }
 
-    /**
-     * @description Top-level collection for all task submissions.
-     * @path /submissions/{submissionId}
-     * @allow Admins can read all submissions. Users can read their own.
-     * @allow Users can create their own submissions.
-     */
+    // Top-level collection for admin review.
+    // Users can create (submit) but cannot read the list. Admins have full control.
     match /submissions/{submissionId} {
-      allow read: if (resource.data.userId == request.auth.uid && 'userId' in resource.data) || isAdmin();
       allow create: if isOwner(request.resource.data.userId);
-      allow update, delete: if isAdmin();
+      allow read, update, delete: if isAdmin();
     }
     
-    /**
-     * @description Top-level collection for all deposit requests for admin view.
-     * @path /deposits/{depositId}
-     * @allow Admins can read all deposits.
-     */
+    // Top-level collection for admin review of deposits.
     match /deposits/{depositId} {
-      allow read, create, update, delete: if isAdmin();
+       allow create: if isOwner(request.resource.data.userId);
+       allow read, update, delete: if isAdmin();
     }
     
-    /**
-     * @description Top-level collection for all withdrawal requests for admin view.
-     * @path /withdrawals/{withdrawalId}
-     * @allow Admins can read all withdrawals.
-     */
+    // Top-level collection for admin review of withdrawals.
     match /withdrawals/{withdrawalId} {
-       allow read, create, update, delete: if isAdmin();
+       allow create: if isOwner(request.resource.data.userId);
+       allow read, update, delete: if isAdmin();
     }
 
-    /**
-     * @description Stores payment agent information.
-     * @path /agents/{agentId}
-     * @allow Any authenticated user can read agents. Admins can manage them.
-     */
     match /agents/{agentId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
-    /**
-     * @description Stores wallet information.
-     * @path /wallets/{walletId}
-     * @deny All operations are denied because the entity is missing an ownership field.
-     */
     match /wallets/{walletId} {
       allow read, write: if false;
     }

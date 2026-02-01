@@ -8,24 +8,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { cn } from "@/lib/utils";
 import { Check, X } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, updateDoc } from "firebase/firestore";
+import { collection, doc, runTransaction, Timestamp } from "firebase/firestore";
 import type { Withdrawal, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
-import { Timestamp } from "firebase/firestore";
 
 function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    // Fetch all withdrawals
+    // Query the top-level 'withdrawals' collection for admin review
     const withdrawalsQuery = useMemoFirebase(
         () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'withdrawals') : null,
         [firestore, adminUser]
     );
     const { data: withdrawals, isLoading: withdrawalsLoading } = useCollection<Withdrawal>(withdrawalsQuery);
 
-    // Fetch all users
     const usersQuery = useMemoFirebase(
         () => (firestore && adminUser?.role === 'admin') ? collection(firestore, 'users') : null,
         [firestore, adminUser]
@@ -39,19 +37,28 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
     
     const getUserById = (id: string) => usersMap.get(id);
 
-    const handleStatusChange = async (withdrawalId: string, newStatus: 'approved' | 'rejected') => {
+    const handleStatusChange = async (withdrawal: Withdrawal, newStatus: 'approved' | 'rejected') => {
         if (!firestore) return;
+        toast({ title: `Updating to ${newStatus}...` });
+
+        // Refs for the two documents that need to be updated
+        const adminWithdrawalRef = doc(firestore, 'withdrawals', withdrawal.id);
+        const userWithdrawalRef = doc(firestore, 'users', withdrawal.userId, 'withdrawals', withdrawal.id);
         
-        const withdrawalRef = doc(firestore, 'withdrawals', withdrawalId);
         try {
-            await updateDoc(withdrawalRef, { status: newStatus });
+            await runTransaction(firestore, async (transaction) => {
+              // Note: You might want to add a transaction to the user's wallet balance here if 'approved'
+              transaction.update(adminWithdrawalRef, { status: newStatus });
+              transaction.update(userWithdrawalRef, { status: newStatus });
+            });
+            
             toast({
                 title: `Withdrawal ${newStatus}`,
                 description: `The withdrawal status has been updated.`,
                 variant: newStatus === 'rejected' ? 'destructive' : 'default',
             });
         } catch (e) {
-            console.error(e);
+            console.error("Transaction failed: ", e);
             toast({
                 title: 'Update failed',
                 description: 'Could not update withdrawal status.',
@@ -116,8 +123,8 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
                                     <TableCell>
                                         {withdrawal.status === 'pending' && (
                                             <div className="flex gap-2">
-                                                <Button size="sm" variant="outline" onClick={() => handleStatusChange(withdrawal.id, 'approved')}><Check className="size-4 mr-2" />Approve</Button>
-                                                <Button size="sm" variant="destructive-outline" onClick={() => handleStatusChange(withdrawal.id, 'rejected')}><X className="size-4 mr-2" />Reject</Button>
+                                                <Button size="sm" variant="outline" onClick={() => handleStatusChange(withdrawal, 'approved')}><Check className="size-4 mr-2" />Approve</Button>
+                                                <Button size="sm" variant="destructive-outline" onClick={() => handleStatusChange(withdrawal, 'rejected')}><X className="size-4 mr-2" />Reject</Button>
                                             </div>
                                         )}
                                     </TableCell>

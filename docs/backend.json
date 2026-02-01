@@ -364,19 +364,31 @@
       "schema": {
         "$ref": "#/entities/Submission"
       },
-      "description": "Top-level collection of all task submissions from all users."
+      "description": "Top-level collection of all task submissions from all users for admin review."
     },
     "/users/{userId}/deposits/{depositId}": {
       "schema": {
         "$ref": "#/entities/Deposit"
       },
-      "description": "Collection of deposits for a specific user."
+      "description": "Subcollection of deposits for a specific user, for their personal history."
     },
     "/users/{userId}/withdrawals/{withdrawalId}": {
       "schema": {
         "$ref": "#/entities/Withdrawal"
       },
-      "description": "Collection of withdrawal requests for a specific user."
+      "description": "Subcollection of withdrawal requests for a specific user, for their personal history."
+    },
+    "/deposits/{depositId}": {
+      "schema": {
+        "$ref": "#/entities/Deposit"
+      },
+      "description": "Top-level collection of all deposit requests for admin review."
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": {
+        "$ref": "#/entities/Withdrawal"
+      },
+      "description": "Top-level collection of all withdrawal requests for admin review."
     },
     "/users/{userId}/testimonials/{testimonialId}": {
       "schema": {
