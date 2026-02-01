@@ -1,29 +1,34 @@
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
+/**
+ * Renders the application logo as an image.
+ * This component now displays the full logo including text.
+ * Assumes a logo.png file exists in the /public directory.
+ */
 export function Logo({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center justify-center size-10 bg-primary rounded-md', className)}>
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-6 text-primary-foreground"
-        >
-            <path d="M20 6 9 17l-5-5" />
-        </svg>
-    </div>
+    <Image
+        src="/logo.png"
+        alt="TaskVerse Logo"
+        width={250} // Intrinsic width of the logo image for aspect ratio.
+        height={250} // Intrinsic height of the logo image for aspect ratio.
+        className={cn('h-10 w-auto', className)} // Default display size is 40px height.
+        priority // Logos are usually important for LCP.
+    />
   );
 }
 
+/**
+ * Displays the full application logo. This is the primary logo component
+ * used throughout the app.
+ */
 export function LogoWithText({ className }: { className?: string }) {
+    // The parent div is kept to preserve layout from the previous version.
+    // The text span is removed because the new logo image includes the "TaskVerse" text.
     return (
-        <div className={cn("flex items-center gap-2", className)}>
+        <div className={cn("flex items-center", className)}>
             <Logo />
-            <span className="font-headline text-lg font-bold text-foreground">TaskVerse</span>
         </div>
     )
 }
