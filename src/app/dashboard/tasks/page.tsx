@@ -152,6 +152,13 @@ export default function TasksPage() {
                 </Button>
             );
         }
+        if (task.id === '13') { // Logic Puzzle Solving
+            return (
+                <Button className="w-full" asChild>
+                    <Link href="/dashboard/tasks/logic-puzzle">Start Challenge</Link>
+                </Button>
+            );
+        }
         return (
           <Button
             className="w-full"
