@@ -3,7 +3,7 @@ import PublicHeader from '@/components/landing/public-header';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 
-const aboutHeroImage = PlaceHolderImages.find(img => img.id === 'partners_hero');
+const aboutHeroImage = PlaceHolderImages.find(img => img.id === 'about_hero');
 
 export default function AboutPage() {
   return (
@@ -17,7 +17,7 @@ export default function AboutPage() {
               alt="About TaskVerse"
               fill
               className="object-cover"
-              data-ai-hint="team business"
+              data-ai-hint={aboutHeroImage.imageHint}
               priority
             />
           )}
