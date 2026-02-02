@@ -47,6 +47,8 @@ import Link from 'next/link';
 import { WalletActivity } from '@/components/dashboard/wallet-activity';
 
 const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
+const USD_TO_NGN_RATE = 1500;
+const USD_TO_ETB_RATE = 58;
 
 export default function WalletPage() {
   const { toast } = useToast();
@@ -78,8 +80,26 @@ export default function WalletPage() {
   }, [agents, user?.country]);
 
 
-  const maxWithdrawalAmount = user ? (user.level || 1) * 100 : 0;
+  const getCurrencyForCountry = (country: string) => {
+    if (country === 'Nigeria') return 'NGN';
+    if (country === 'Ethiopia') return 'ETB';
+    return 'USD';
+  };
+
+  const getUsdToLocalRate = (currency: string) => {
+    if (currency === 'NGN') return USD_TO_NGN_RATE;
+    if (currency === 'ETB') return USD_TO_ETB_RATE;
+    return 1; // for USD
+  };
+  
+  const localCurrency = user ? getCurrencyForCountry(user.country || '') : 'USD';
+  const localRate = getUsdToLocalRate(localCurrency);
+  
   const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
+  const userBalanceInLocalCurrency = userBalanceInUSD * localRate;
+  
+  const maxWithdrawalInUSD = user ? (user.level || 1) * 100 : 0;
+  const maxWithdrawalAmountInLocal = maxWithdrawalInUSD * localRate;
 
 
   // Query user-specific sub-collections for their history
@@ -114,12 +134,6 @@ export default function WalletPage() {
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
     toast({ title: 'Copied to clipboard!' });
-  };
-  
-  const getCurrencyForCountry = (country: string) => {
-    if (country === 'Nigeria') return 'NGN';
-    if (country === 'Ethiopia') return 'ETB';
-    return 'USD';
   };
 
   const handleDepositSubmit = async () => {
@@ -226,12 +240,12 @@ export default function WalletPage() {
       setLoading(false);
       return;
     }
-    if (amount > userBalanceInUSD) {
+    if (amount > userBalanceInLocalCurrency) {
       toast({ variant: 'destructive', title: 'Insufficient Balance' });
       setLoading(false);
       return;
     }
-    if (amount > maxWithdrawalAmount) {
+    if (amount > maxWithdrawalAmountInLocal) {
       toast({ variant: 'destructive', title: 'Withdrawal Limit Exceeded' });
       setLoading(false);
       return;
@@ -244,7 +258,7 @@ export default function WalletPage() {
       id: userWithdrawalRef.id,
       userId: user.id,
       amount: amount,
-      currency: 'USD',
+      currency: localCurrency,
       userBankInfo: { bankName, accountNumber, accountName },
       status: 'pending' as const,
       requestedAt: serverTimestamp(),
@@ -432,7 +446,7 @@ export default function WalletPage() {
                           <Coins className="size-5 text-amber-500" />
                           {(user.walletBalance || 0).toLocaleString()} Coins
                           <span className="text-sm text-muted-foreground">
-                            (${userBalanceInUSD.toFixed(2)})
+                             ({userBalanceInLocalCurrency.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })})
                           </span>
                         </p>
                       </div>
@@ -441,13 +455,13 @@ export default function WalletPage() {
                           Max Withdrawal
                         </p>
                         <p className="text-lg font-bold">
-                          ${maxWithdrawalAmount.toFixed(2)}
+                          {maxWithdrawalAmountInLocal.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })}
                         </p>
                       </div>
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="withdraw-amount">Amount (USD)</Label>
+                    <Label htmlFor="withdraw-amount">Amount ({localCurrency})</Label>
                     <Input
                       id="withdraw-amount"
                       type="number"
@@ -456,7 +470,7 @@ export default function WalletPage() {
                       onChange={(e) => setWithdrawalAmount(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                        Conversion: 100 Coins = $1.00 USD
+                        Your balance will be converted from Coins to {localCurrency} upon withdrawal.
                     </p>
                   </div>
                   <div className="space-y-2">
@@ -574,7 +588,7 @@ export default function WalletPage() {
                               {withdrawals.map((tx) => (
                                 <TableRow key={`wd-${tx.id}`}>
                                   <TableCell>
-                                    ${tx.amount.toLocaleString()} {tx.currency}
+                                    {tx.amount.toLocaleString()} {tx.currency}
                                   </TableCell>
                                   <TableCell>
                                     <Badge

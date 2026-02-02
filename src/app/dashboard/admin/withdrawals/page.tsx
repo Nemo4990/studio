@@ -13,6 +13,16 @@ import type { Withdrawal, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 
+const COIN_TO_USD_RATE = 0.01; // 100 coins = $1
+const USD_TO_NGN_RATE = 1500;
+const USD_TO_ETB_RATE = 58;
+
+const getUsdToLocalRate = (currency: string) => {
+    if (currency === 'NGN') return USD_TO_NGN_RATE;
+    if (currency === 'ETB') return USD_TO_ETB_RATE;
+    return 1; // for USD
+};
+
 function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -46,16 +56,18 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
         
         if (newStatus === 'approved') {
             const userRef = doc(firestore, 'users', withdrawal.userId);
-            const COIN_TO_USD_RATE = 0.01; // 100 coins = $1
-
+            
             try {
                 await runTransaction(firestore, async (transaction) => {
                     const userDoc = await transaction.get(userRef);
                     if (!userDoc.exists()) {
                         throw new Error("User not found!");
                     }
-
-                    const coinsToDeduct = withdrawal.amount / COIN_TO_USD_RATE;
+                    
+                    const localRate = getUsdToLocalRate(withdrawal.currency);
+                    const amountInUSD = withdrawal.amount / localRate;
+                    const coinsToDeduct = amountInUSD / COIN_TO_USD_RATE;
+                    
                     const currentBalance = userDoc.data().walletBalance || 0;
 
                     if (currentBalance < coinsToDeduct) {
