@@ -4,7 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAppAdmin() {
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // An admin is defined by having the specific email 'admin@taskverse.io'.
+      // This is a simple and secure way to designate an admin without complex role lookups.
+      return request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
     match /users/{userId} {
