@@ -14,6 +14,7 @@ export type User = {
   country?: string;
   state?: string;
   taskAttempts?: { [taskId: string]: number };
+  signalScavengerClickedTiles?: string[];
 };
 
 export type Testimonial = {

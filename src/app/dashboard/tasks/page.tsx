@@ -235,6 +235,9 @@ export default function TasksPage() {
         if (task.id === '13') {
             return <Button className="w-full" onClick={() => handleStartGame(task.id, '/dashboard/tasks/logic-puzzle')}>Start Challenge</Button>;
         }
+        if (task.id === 'scavenger-1') {
+            return <Button className="w-full" onClick={() => router.push('/dashboard/tasks/signal-scavenger')}>Start Scavenger Hunt</Button>;
+        }
         return <Button className="w-full" onClick={() => handleSubmit(task.id, task.name, task.reward)}>Submit Task</Button>;
       default:
         return null;
