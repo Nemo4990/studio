@@ -22,7 +22,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import type { Agent, Deposit, Withdrawal } from '@/lib/types';
 import { Banknote, Copy, Coins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -55,6 +55,9 @@ export default function WalletPage() {
 
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
+  const [depositProofFile, setDepositProofFile] = useState<File | null>(null);
+  const depositProofInputRef = useRef<HTMLInputElement>(null);
+
 
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [bankName, setBankName] = useState('');
@@ -128,6 +131,14 @@ export default function WalletPage() {
       });
       return;
     }
+     if (!depositProofFile) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Proof',
+        description: 'Please upload a proof of payment.',
+      });
+      return;
+    }
     setLoading(true);
 
     const amount = parseFloat(depositAmount);
@@ -141,45 +152,65 @@ export default function WalletPage() {
       return;
     }
     
-    // Create a reference for the new document in BOTH collections
-    const userDepositRef = doc(collection(firestore, 'users', user.id, 'deposits'));
-    const topLevelDepositRef = doc(collection(firestore, 'deposits'), userDepositRef.id);
+    const reader = new FileReader();
+    reader.readAsDataURL(depositProofFile);
 
-    const depositData = {
-      id: userDepositRef.id,
-      userId: user.id,
-      agentId: selectedAgent.id,
-      agentName: selectedAgent.name,
-      amount: amount,
-      currency: getCurrencyForCountry(user.country),
-      status: 'pending' as const,
-      proofOfPayment: `https://picsum.photos/seed/${userDepositRef.id}/800/600`, // Dynamic placeholder proof
-      createdAt: serverTimestamp(),
+    reader.onload = async () => {
+      const proofOfPaymentUrl = reader.result as string;
+
+      const userDepositRef = doc(collection(firestore, 'users', user.id, 'deposits'));
+      const topLevelDepositRef = doc(collection(firestore, 'deposits'), userDepositRef.id);
+
+      const depositData = {
+        id: userDepositRef.id,
+        userId: user.id,
+        agentId: selectedAgent.id,
+        agentName: selectedAgent.name,
+        amount: amount,
+        currency: getCurrencyForCountry(user.country!),
+        status: 'pending' as const,
+        proofOfPayment: proofOfPaymentUrl,
+        createdAt: serverTimestamp(),
+      };
+      
+      try {
+        // Use a batch to write to both locations atomically
+        const batch = writeBatch(firestore);
+        batch.set(userDepositRef, depositData);
+        batch.set(topLevelDepositRef, depositData);
+        await batch.commit();
+
+        toast({
+          title: 'Deposit Request Submitted!',
+          description: 'Your request is pending admin approval.',
+        });
+        setDepositAmount('');
+        setSelectedAgent(null);
+        setDepositProofFile(null);
+        if (depositProofInputRef.current) {
+          depositProofInputRef.current.value = '';
+        }
+      } catch (error) {
+         console.error("Deposit submission failed:", error);
+         toast({
+          variant: 'destructive',
+          title: 'Submission Failed',
+          description: 'There was a problem submitting your request. Please check security rules and try again.',
+        });
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    try {
-      // Use a batch to write to both locations atomically
-      const batch = writeBatch(firestore);
-      batch.set(userDepositRef, depositData);
-      batch.set(topLevelDepositRef, depositData);
-      await batch.commit();
 
+    reader.onerror = (error) => {
+      console.error('File reading error:', error);
       toast({
-        title: 'Deposit Request Submitted!',
-        description: 'Your request is pending admin approval.',
-      });
-      setDepositAmount('');
-      setSelectedAgent(null);
-    } catch (error) {
-       console.error("Deposit submission failed:", error);
-       toast({
         variant: 'destructive',
-        title: 'Submission Failed',
-        description: 'There was a problem submitting your request. Please check security rules and try again.',
+        title: 'File Read Error',
+        description: 'There was a problem reading your file. Please try another.',
       });
-    } finally {
       setLoading(false);
-    }
+    };
   };
 
   const handleWithdrawalSubmit = async () => {
@@ -363,7 +394,7 @@ export default function WalletPage() {
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="proof">Proof of Payment</Label>
-                              <Input id="proof" type="file" />
+                              <Input id="proof" type="file" accept="image/*" ref={depositProofInputRef} onChange={(e) => setDepositProofFile(e.target.files?.[0] || null)} />
                             </div>
                             <Button
                               className="w-full"
