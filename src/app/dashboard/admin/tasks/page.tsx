@@ -135,6 +135,11 @@ export default function AdminTasksPage() {
         toast({ title: 'Task deleted successfully' });
       })
       .catch((serverError) => {
+        toast({
+            variant: 'destructive',
+            title: 'Delete Failed',
+            description: 'You do not have permission to delete tasks.'
+        });
         const permissionError = new FirestorePermissionError({
           path: taskDocRef.path,
           operation: 'delete',
@@ -155,6 +160,11 @@ export default function AdminTasksPage() {
           setEditingTask(null);
         })
         .catch((serverError) => {
+           toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'You do not have permission to update tasks.',
+          });
           const permissionError = new FirestorePermissionError({
             path: taskRef.path,
             operation: 'update',
@@ -172,6 +182,11 @@ export default function AdminTasksPage() {
           setEditingTask(null);
         })
         .catch((serverError) => {
+          toast({
+            variant: 'destructive',
+            title: 'Creation Failed',
+            description: 'You do not have permission to create tasks.',
+          });
           const permissionError = new FirestorePermissionError({
             path: taskRef.path,
             operation: 'create',
