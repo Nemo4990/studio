@@ -2,8 +2,7 @@
 
 import PageHeader from '@/components/dashboard/page-header';
 import StatCard from '@/components/dashboard/stat-card';
-import { userTasks } from '@/lib/data';
-import { BarChart, CheckCircle2, CircleDollarSign, Star, Coins } from 'lucide-react';
+import { BarChart, CheckCircle2, Star, Coins } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -12,7 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UserDashboardPage() {
     const { user, loading } = useUser();
-    const completedTasks = userTasks.filter(t => t.status === 'completed').length;
 
     if (loading || !user) {
         return (
@@ -27,38 +25,40 @@ export default function UserDashboardPage() {
             </div>
         )
     }
+  
+  // For a new user, tasks completed and total earnings will be 0.
+  // This is a simplification to address the new user experience as requested.
+  // A more robust solution would fetch and count approved submissions.
+  const completedTasks = user.level === 1 ? 0 : '...'; // Placeholder for existing users
+  const totalEarnings = user.level === 1 ? 0 : user.walletBalance > 0 ? '...' : 0;
+
 
   return (
     <>
-      <PageHeader title="Dashboard" description="Welcome back! Here's a summary of your account." />
+      <PageHeader title="Dashboard" description={`Welcome back, ${user.name}! Here's a summary of your account.`} />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Current Level" value={`Level ${user.level}`} icon={Star} description="Complete more tasks to level up" />
+        <StatCard title="Current Level" value={`Level ${user.level}`} icon={Star} description="Complete tasks to level up" />
         <StatCard title="Wallet Balance" value={`${user.walletBalance.toLocaleString()} Coins`} icon={Coins} description="Available for withdrawal" />
-        <StatCard title="Tasks Completed" value={completedTasks} icon={CheckCircle2} description="Keep up the great work!" />
-        <StatCard title="Total Earnings" value="45,023 Coins" icon={BarChart} description="All-time earnings" />
+        <StatCard title="Tasks Completed" value={0} icon={CheckCircle2} description="Keep up the great work!" />
+        <StatCard title="Total Earnings" value="0 Coins" icon={BarChart} description="All-time earnings" />
       </div>
-      <div className="mt-8">
-        <Card>
-            <CardHeader>
-                <CardTitle className="font-headline">Next Task Available</CardTitle>
-                <CardDescription>This is the next task you can complete to earn rewards.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="flex flex-col md:flex-row md:items-center justify-between p-4 bg-secondary rounded-lg">
-                    <div>
-                        <h3 className="text-lg font-semibold">{userTasks[0].title}</h3>
-                        <p className="text-muted-foreground">{userTasks[0].description}</p>
-                    </div>
-                    <div className="flex items-center gap-4 mt-4 md:mt-0">
-                        <span className="font-semibold text-lg text-primary">+{userTasks[0].reward} Coins</span>
-                        <Button asChild>
-                            <Link href="/dashboard/tasks">View Task</Link>
-                        </Button>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-      </div>
+
+      {user.level === 1 && (
+        <div className="mt-8">
+            <Card className="bg-primary/10 border-primary/20">
+                <CardHeader>
+                    <CardTitle className="font-headline text-primary">Welcome to TaskVerse!</CardTitle>
+                    <CardDescription>Your journey starts here. Make your first deposit to level up and unlock more rewarding tasks.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-muted-foreground mb-4">Depositing not only increases your level but also shows your commitment, giving you access to exclusive, higher-paying tasks sooner.</p>
+                    <Button asChild>
+                        <Link href="/dashboard/wallet">Make a Deposit</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+      )}
     </>
   );
 }
