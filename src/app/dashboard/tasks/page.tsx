@@ -208,6 +208,12 @@ export default function TasksPage() {
   };
 
   const getTaskAction = (task: (Task & { status: string; trialsLeft: number })) => {
+    // The Signal Scavenger task is a special case. It's a persistent board, not a one-time submission.
+    // So, we always link to its page regardless of the 'completed' status derived from submissions.
+    if (task.id === 'scavenger-1') {
+        return <Button className="w-full" onClick={() => router.push('/dashboard/tasks/signal-scavenger')}>Start Scavenger Hunt</Button>;
+    }
+      
     switch (task.status) {
       case 'completed': return <Button className="w-full" variant="outline" disabled>Completed</Button>;
       case 'locked': return <Button className="w-full" disabled>Locked</Button>;
@@ -234,9 +240,6 @@ export default function TasksPage() {
         }
         if (task.id === '13') {
             return <Button className="w-full" onClick={() => handleStartGame(task.id, '/dashboard/tasks/logic-puzzle')}>Start Challenge</Button>;
-        }
-        if (task.id === 'scavenger-1') {
-            return <Button className="w-full" onClick={() => router.push('/dashboard/tasks/signal-scavenger')}>Start Scavenger Hunt</Button>;
         }
         return <Button className="w-full" onClick={() => handleSubmit(task.id, task.name, task.reward)}>Submit Task</Button>;
       default:
