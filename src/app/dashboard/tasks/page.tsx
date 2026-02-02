@@ -12,8 +12,8 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, updateDoc, Timestamp, query, where } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, doc, setDoc, serverTimestamp, updateDoc, Timestamp, query, where, runTransaction } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -121,34 +121,90 @@ export default function TasksPage() {
       });
   };
 
-  const handleDailyCheckin = (task: Task) => {
+  const handleDailyCheckin = async (task: Task) => {
     if (!user || !firestore) return;
-    const twentyFourHours = 24 * 60 * 60 * 1000;
-    const lastCheckin = user.lastDailyCheckin as unknown as Timestamp;
-    if (lastCheckin && new Date().getTime() - lastCheckin.toDate().getTime() < twentyFourHours) {
-        toast({
-            title: 'Already Claimed',
-            description: 'You can claim your daily check-in reward once every 24 hours.',
-            variant: 'destructive'
-        });
-        return;
-    }
-    handleSubmit(task.id, task.name, task.reward);
-    const userRef = doc(firestore, 'users', user.id);
-    updateDoc(userRef, { lastDailyCheckin: serverTimestamp() }).catch(err => {
-      console.error("Failed to update lastDailyCheckin timestamp:", err);
-    });
-  }
 
-  const handleStartGame = (taskId: string, path: string) => {
+    const userRef = doc(firestore, 'users', user.id);
+    const submissionRef = doc(collection(firestore, 'submissions'));
+
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw new Error("User document does not exist!");
+        }
+
+        const lastCheckin = userDoc.data().lastDailyCheckin as Timestamp;
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (lastCheckin && new Date().getTime() - lastCheckin.toDate().getTime() < twentyFourHours) {
+          throw new Error('Already Claimed');
+        }
+
+        const submissionData = {
+          id: submissionRef.id,
+          userId: user.id,
+          taskId: task.id,
+          submittedAt: serverTimestamp(),
+          status: 'pending' as const,
+          taskTitle: task.name,
+          reward: task.reward,
+          user: {
+            name: user.name || '',
+            email: user.email || '',
+            avatarUrl: user.avatarUrl || '',
+          },
+          proof: `Daily check-in for ${new Date().toISOString()}`,
+        };
+        
+        transaction.set(submissionRef, submissionData);
+        transaction.update(userRef, { lastDailyCheckin: serverTimestamp() });
+      });
+
+      toast({
+        title: 'Task Submitted!',
+        description: `Your submission for "${task.name}" is pending review.`,
+      });
+    } catch (error: any) {
+      if (error.message === 'Already Claimed') {
+        toast({
+          title: 'Already Claimed',
+          description: 'You can claim your daily check-in reward once every 24 hours.',
+          variant: 'destructive',
+        });
+      } else {
+        console.error("Daily check-in failed:", error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not process your daily check-in. Please try again.",
+        });
+      }
+    }
+  };
+
+  const handleStartGame = async (taskId: string, path: string) => {
     if (!user || !firestore) return;
     const userRef = doc(firestore, 'users', user.id);
-    const currentAttempts = user.taskAttempts || {};
-    const newAttempts = { ...currentAttempts, [taskId]: (currentAttempts[taskId] ?? 0) + 1 };
     
-    // Non-blocking update for snappy UI
-    updateDocumentNonBlocking(userRef, { taskAttempts: newAttempts });
-    router.push(path);
+    try {
+      await runTransaction(firestore, async (transaction) => {
+        const userDoc = await transaction.get(userRef);
+        if (!userDoc.exists()) {
+          throw new Error("User document does not exist!");
+        }
+        const currentAttempts = userDoc.data().taskAttempts || {};
+        const newAttempts = { ...currentAttempts, [taskId]: (currentAttempts[taskId] ?? 0) + 1 };
+        transaction.update(userRef, { taskAttempts: newAttempts });
+      });
+      router.push(path);
+    } catch (error) {
+      console.error("Failed to update task attempts:", error);
+      toast({
+        variant: "destructive",
+        title: "Error Starting Game",
+        description: "Could not update your attempts. Please try again.",
+      });
+    }
   };
 
   const getTaskAction = (task: (Task & { status: string; trialsLeft: number })) => {
