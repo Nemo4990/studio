@@ -154,6 +154,28 @@ export default function AdminTasksPage() {
     if (user?.role !== 'admin') {
         return <PageHeader title="Unauthorized" description="You do not have permission to view this page." />;
     }
+    
+    const initialTasksToSeed = [
+        { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 1 },
+        { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 1 },
+        { id: 'scavenger-1', name: 'Signal Scavenger', description: 'Visit our partners to find the signal. Click all 12 tiles to claim your reward.', reward: 500, requiredLevel: 1 },
+        { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 1 },
+        { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 1 },
+        { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 1 },
+        { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2 },
+        { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3 },
+    ];
+
+    const seedDatabase = async () => {
+        if (!firestore) return;
+        toast({ title: 'Seeding tasks...' });
+        const promises = initialTasksToSeed.map(task => {
+            const docRef = doc(firestore, 'tasks', task.id);
+            return setDoc(docRef, task, { merge: true });
+        });
+        await Promise.all(promises);
+        toast({ title: 'Tasks seeded successfully!' });
+    }
 
     return (
         <>
@@ -175,6 +197,7 @@ export default function AdminTasksPage() {
                     {tasks && tasks.length === 0 && !tasksLoading && (
                         <div className="text-center py-10 border-2 border-dashed rounded-lg">
                             <p className="text-muted-foreground">No tasks found.</p>
+                            <Button variant="link" onClick={seedDatabase}>Click here to add initial tasks</Button>
                         </div>
                     )}
                     {tasks && tasks.length > 0 && (
