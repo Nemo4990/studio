@@ -45,10 +45,15 @@ service cloud.firestore {
     }
 
     match /submissions/{submissionId} {
-      // Any authenticated user can create a submission record.
+      // Any authenticated user can create a submission record for themselves.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // Only admins can read or modify submissions.
+      
+      // Admins can read, update, and delete all submissions.
       allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+
+      // Users can get and list THEIR OWN submissions.
+      allow get: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow list: if request.auth != null && request.query.where.userId == request.auth.uid;
     }
     
     match /deposits/{depositId} {
