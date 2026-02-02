@@ -194,13 +194,7 @@ export default function AdminTasksPage() {
                     <CardDescription>A list of all tasks currently in the system.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {tasks && tasks.length === 0 && !tasksLoading && (
-                        <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                            <p className="text-muted-foreground">No tasks found.</p>
-                            <Button variant="link" onClick={seedDatabase}>Click here to add initial tasks</Button>
-                        </div>
-                    )}
-                    {tasks && tasks.length > 0 && (
+                    {tasks && tasks.length > 0 ? (
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -241,6 +235,14 @@ export default function AdminTasksPage() {
                                 ))}
                             </TableBody>
                         </Table>
+                    ) : (
+                        <div className="text-center py-10 border-2 border-dashed rounded-lg flex flex-col items-center gap-4">
+                            <p className="text-muted-foreground">No tasks found in the database.</p>
+                            <Button onClick={seedDatabase}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Seed Initial Tasks
+                            </Button>
+                        </div>
                     )}
                 </CardContent>
             </Card>
