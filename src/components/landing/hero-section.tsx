@@ -12,24 +12,24 @@ export default function HeroSection() {
       <AnimatedCoins />
       <div className="container relative z-10">
         <div className="mx-auto max-w-4xl">
-          <h1 className="font-headline text-5xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl">
+          <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl">
             Unleash the power of <span className="text-glow">intuitive earning</span>
           </h1>
           <p className="mt-6 text-lg leading-8 text-muted-foreground md:text-xl">
             Say goodbye to complex crypto platforms. Complete simple tasks, manage your earnings like a pro. Simple, intuitive, and rewarding.
           </p>
-          <div className="mt-10 flex items-center justify-center gap-x-4">
-            <Button size="lg" asChild>
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <Button size="lg" asChild className="w-full sm:w-auto">
               <Link href="/signup">Get Started Today</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button size="lg" variant="outline" asChild className="w-full sm:w-auto">
               <Link href="#features">Learn More &rarr;</Link>
             </Button>
           </div>
         </div>
 
         {heroDashboardImage && (
-            <div className="mt-20">
+            <div className="mt-16 sm:mt-20">
                 <Image
                     src={heroDashboardImage.imageUrl}
                     alt={heroDashboardImage.description}

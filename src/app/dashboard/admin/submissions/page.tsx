@@ -83,7 +83,10 @@ function SubmissionTable({
                   <AvatarImage src={sub.user.avatarUrl} alt={sub.user.name} />
                   <AvatarFallback>{sub.user.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-                <div>{sub.user.name}</div>
+                <div>
+                  <div className="font-medium">{sub.user.name}</div>
+                  <div className="text-xs text-muted-foreground md:hidden">{sub.user.email}</div>
+                </div>
               </div>
             </TableCell>
             <TableCell>{sub.taskTitle}</TableCell>
@@ -96,7 +99,7 @@ function SubmissionTable({
             <TableCell>{toDate(sub.submittedAt).toLocaleString()}</TableCell>
             <TableCell>
               {sub.status === 'pending' ? (
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button
                     size="sm"
                     variant="outline"

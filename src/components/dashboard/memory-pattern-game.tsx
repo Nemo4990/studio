@@ -179,13 +179,13 @@ export default function MemoryPatternGame() {
                     <p className="text-center text-sm mt-1 text-muted-foreground">{timer}s remaining</p>
                 </div>
             )}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {Array.from({ length: GRID_SIZE * GRID_SIZE }).map((_, index) => (
                 <div
                   key={index}
                   onClick={() => handleTileClick(index)}
                   className={cn(
-                    'h-24 w-24 rounded-lg border-2 border-white/20 transition-colors duration-200',
+                    'h-20 w-20 sm:h-24 sm:w-24 rounded-lg border-2 border-white/20 transition-colors duration-200',
                     gameState === 'awaiting-input' && 'cursor-pointer hover:bg-white/20',
                     activeTile === index ? 'bg-primary border-primary' : 'bg-white/10'
                   )}
@@ -226,7 +226,7 @@ export default function MemoryPatternGame() {
 
   return (
     <Card className="w-full max-w-2xl bg-black/30 backdrop-blur-sm text-white border-white/20">
-      <CardContent className="p-8 flex flex-col items-center justify-center min-h-[480px]">
+      <CardContent className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-[480px]">
         {renderContent()}
       </CardContent>
     </Card>

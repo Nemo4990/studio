@@ -126,9 +126,9 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
                         <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead>Amount</TableHead>
-                            <TableHead>Bank Info</TableHead>
+                            <TableHead className="hidden md:table-cell">Bank Info</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead>Date</TableHead>
+                            <TableHead className="hidden md:table-cell">Date</TableHead>
                             <TableHead>Actions</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -151,19 +151,19 @@ function AdminWithdrawalsView({ adminUser }: { adminUser: User | null }) {
                                         )}
                                     </TableCell>
                                     <TableCell>{withdrawal.amount.toLocaleString()} {withdrawal.currency}</TableCell>
-                                    <TableCell>
+                                    <TableCell className="hidden md:table-cell">
                                         <div className="text-sm font-medium">{withdrawal.userBankInfo.accountName}</div>
                                         <div className="text-xs text-muted-foreground">{withdrawal.userBankInfo.bankName} - {withdrawal.userBankInfo.accountNumber}</div>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={withdrawal.status === 'approved' ? 'default' : withdrawal.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(withdrawal.status === 'approved' && 'bg-green-500/80')}>{withdrawal.status}</Badge>
                                     </TableCell>
-                                    <TableCell>{(withdrawal.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
+                                    <TableCell className="hidden md:table-cell">{(withdrawal.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
                                     <TableCell>
                                         {withdrawal.status === 'pending' && (
                                             <div className="flex gap-2">
-                                                <Button size="sm" variant="outline" onClick={() => handleStatusChange(withdrawal, 'approved')}><Check className="size-4 mr-2" />Approve</Button>
-                                                <Button size="sm" variant="destructive-outline" onClick={() => handleStatusChange(withdrawal, 'rejected')}><X className="size-4 mr-2" />Reject</Button>
+                                                <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => handleStatusChange(withdrawal, 'approved')}><Check className="size-4" /></Button>
+                                                <Button size="icon" variant="destructive-outline" className="h-8 w-8" onClick={() => handleStatusChange(withdrawal, 'rejected')}><X className="size-4" /></Button>
                                             </div>
                                         )}
                                     </TableCell>

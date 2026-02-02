@@ -163,7 +163,7 @@ function LiveCryptoChart() {
                         <CardTitle className="font-headline">{activeCoin} Price Chart</CardTitle>
                         <CardDescription>Live price data for the last 30 days.</CardDescription>
                     </div>
-                    <div className="mt-4 sm:mt-0 flex gap-2">
+                    <div className="mt-4 sm:mt-0 flex flex-wrap justify-center sm:justify-start gap-2">
                         {(['BTC', 'ETH', 'SOL'] as Coin[]).map(coin => (
                             <Button key={coin} variant={activeCoin === coin ? 'default' : 'outline'} onClick={() => setActiveCoin(coin)}>{coin}</Button>
                         ))}
@@ -201,8 +201,8 @@ function MarketDataTable() {
                         <TableRow>
                             <TableHead>Asset</TableHead>
                             <TableHead>Price</TableHead>
-                            <TableHead>24h Change</TableHead>
-                            <TableHead>Market Cap</TableHead>
+                            <TableHead className="hidden sm:table-cell">24h Change</TableHead>
+                            <TableHead className="hidden sm:table-cell">Market Cap</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -218,11 +218,13 @@ function MarketDataTable() {
                                     </div>
                                 </TableCell>
                                 <TableCell>${coin.price.toLocaleString()}</TableCell>
-                                <TableCell className={cn(coin.change > 0 ? 'text-green-500' : 'text-red-500', "flex items-center gap-1")}>
-                                    {coin.change > 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
-                                    {Math.abs(coin.change)}%
+                                <TableCell className={cn(coin.change > 0 ? 'text-green-500' : 'text-red-500', "hidden sm:table-cell items-center gap-1")}>
+                                    <div className="flex items-center">
+                                        {coin.change > 0 ? <ArrowUp className="size-4" /> : <ArrowDown className="size-4" />}
+                                        {Math.abs(coin.change)}%
+                                    </div>
                                 </TableCell>
-                                <TableCell>{coin.marketCap}</TableCell>
+                                <TableCell className="hidden sm:table-cell">{coin.marketCap}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
