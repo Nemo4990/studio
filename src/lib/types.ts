@@ -24,11 +24,11 @@ export type Testimonial = {
 
 export type Task = {
   id: string;
-  title: string;
+  name: string;
   description: string;
   reward: number;
-  minLevel: number;
-  status: 'available' | 'completed' | 'locked';
+  requiredLevel: number;
+  status?: 'available' | 'completed' | 'locked';
 };
 
 export type Agent = {

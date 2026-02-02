@@ -95,7 +95,7 @@ export default function TasksPage() {
         return;
     }
 
-    handleSubmit(task.id, task.title, task.reward);
+    handleSubmit(task.id, task.name, task.reward);
 
     const userRef = doc(firestore, 'users', user.id);
     updateDoc(userRef, { lastDailyCheckin: serverTimestamp() }).catch(err => {
@@ -162,7 +162,7 @@ export default function TasksPage() {
         return (
           <Button
             className="w-full"
-            onClick={() => handleSubmit(task.id, task.title, task.reward)}
+            onClick={() => handleSubmit(task.id, task.name, task.reward)}
           >
             Submit Task
           </Button>
@@ -185,7 +185,7 @@ export default function TasksPage() {
         isOpen={isQuizOpen} 
         onClose={() => setIsQuizOpen(false)} 
         onSubmitSuccess={() => {
-            handleSubmit(quizTask.id, quizTask.title, quizTask.reward);
+            handleSubmit(quizTask.id, quizTask.name, quizTask.reward);
         }}
       />}
 
@@ -201,7 +201,7 @@ export default function TasksPage() {
           >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span className="font-headline">{task.title}</span>
+                <span className="font-headline">{task.name}</span>
                 {task.status === 'available' && (
                   <Sparkles className="size-5 text-accent" />
                 )}
@@ -214,7 +214,7 @@ export default function TasksPage() {
               </CardTitle>
               <CardDescription>
                 {task.status === 'locked'
-                  ? `Requires Level ${task.minLevel}`
+                  ? `Requires Level ${task.requiredLevel}`
                   : `${task.reward.toLocaleString()} Coins Reward`}
               </CardDescription>
             </CardHeader>
