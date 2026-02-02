@@ -63,7 +63,7 @@ export function useUser(): UseUserReturn {
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Anonymous',
           email: firebaseUser.email,
           role: firebaseUser.email === 'admin@taskverse.io' ? 'admin' : 'user',
-          level: 1,
+          level: 0,
           walletBalance: 0,
           createdAt: serverTimestamp(),
           avatarUrl: firebaseUser.photoURL || `https://picsum.photos/seed/${firebaseUser.uid}/40/40`

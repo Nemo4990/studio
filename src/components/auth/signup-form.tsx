@@ -40,7 +40,7 @@ export function SignupForm() {
         name,
         email,
         role: email === 'admin@taskverse.io' ? 'admin' : 'user',
-        level: 1,
+        level: 0,
         walletBalance: 0,
         createdAt: serverTimestamp(),
         avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`,

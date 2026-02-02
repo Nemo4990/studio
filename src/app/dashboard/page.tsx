@@ -26,11 +26,8 @@ export default function UserDashboardPage() {
         )
     }
   
-  // For a new user, tasks completed and total earnings will be 0.
-  // This is a simplification to address the new user experience as requested.
-  // A more robust solution would fetch and count approved submissions.
-  const completedTasks = user.level === 1 ? 0 : '...'; // Placeholder for existing users
-  const totalEarnings = user.level === 1 ? 0 : user.walletBalance > 0 ? '...' : 0;
+  const completedTasks = user.level === 0 ? 0 : '...';
+  const totalEarnings = user.level === 0 ? 0 : user.walletBalance > 0 ? '...' : 0;
 
 
   return (
@@ -43,7 +40,7 @@ export default function UserDashboardPage() {
         <StatCard title="Total Earnings" value="0 Coins" icon={BarChart} description="All-time earnings" />
       </div>
 
-      {user.level === 1 && (
+      {user.level === 0 && (
         <div className="mt-8">
             <Card className="bg-primary/10 border-primary/20">
                 <CardHeader>

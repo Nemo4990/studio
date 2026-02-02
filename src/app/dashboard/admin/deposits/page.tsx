@@ -14,6 +14,27 @@ import type { Deposit, User } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 
+const USD_TO_NGN_RATE = 1500;
+const USD_TO_ETB_RATE = 58;
+
+const getLevelFromDeposit = (amount: number, currency: string): number => {
+    let amountInETB = amount;
+
+    if (currency === 'USD') {
+        amountInETB = amount * USD_TO_ETB_RATE;
+    } else if (currency === 'NGN') {
+        const amountInUSD = amount / USD_TO_NGN_RATE;
+        amountInETB = amountInUSD * USD_TO_ETB_RATE;
+    }
+    
+    if (amountInETB >= 20500) return 4;
+    if (amountInETB >= 10500) return 3;
+    if (amountInETB >= 5500) return 2;
+    if (amountInETB >= 1000) return 1;
+    
+    return 0; 
+};
+
 function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -55,10 +76,13 @@ function AdminDepositsView({ adminUser }: { adminUser: User | null }) {
                         throw new Error("User not found!");
                     }
                     
-                    const newLevel = (userDoc.data().level || 1) + 1;
+                    const levelFromDeposit = getLevelFromDeposit(deposit.amount, deposit.currency);
+                    const currentLevel = userDoc.data().level || 0;
+                    
+                    const finalLevel = Math.max(levelFromDeposit, currentLevel);
 
                     transaction.update(userRef, { 
-                        level: newLevel,
+                        level: finalLevel,
                     });
                     transaction.update(depositRef, { status: 'confirmed' });
                     transaction.update(userDepositRef, { status: 'confirmed' });
