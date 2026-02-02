@@ -153,7 +153,7 @@ export default function WalletPage() {
       amount: amount,
       currency: getCurrencyForCountry(user.country),
       status: 'pending' as const,
-      proofOfPayment: 'https://example.com/placeholder-proof.png', // Placeholder proof
+      proofOfPayment: `https://picsum.photos/seed/${userDepositRef.id}/800/600`, // Dynamic placeholder proof
       createdAt: serverTimestamp(),
     };
     
