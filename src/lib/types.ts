@@ -13,6 +13,7 @@ export type User = {
   phoneNumber?: string;
   country?: string;
   state?: string;
+  taskAttempts?: { [taskId: string]: number };
 };
 
 export type Testimonial = {

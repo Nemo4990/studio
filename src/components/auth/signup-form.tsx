@@ -47,6 +47,7 @@ export function SignupForm() {
         phoneNumber: '',
         country: '',
         state: '',
+        taskAttempts: {},
       };
       
       const userDocRef = doc(firestore, 'users', user.uid);

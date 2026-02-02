@@ -44,6 +44,13 @@
         "state": {
           "type": "string",
           "description": "User's state or province."
+        },
+        "taskAttempts": {
+          "type": "object",
+          "description": "Map of taskId to the number of attempts made by the user for game tasks.",
+          "additionalProperties": {
+            "type": "number"
+          }
         }
       },
       "required": [
