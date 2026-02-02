@@ -49,11 +49,11 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       
       // Admins can read, update, and delete all submissions.
-      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Users can also read (get/list) THEIR OWN submissions by querying on userId.
+      allow read: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || 
+                     (request.auth != null && resource.data.userId == request.auth.uid);
 
-      // Users can get and list THEIR OWN submissions.
-      allow get: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow list: if request.auth != null && request.query.where.userId == request.auth.uid;
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
     match /deposits/{depositId} {
