@@ -2,12 +2,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import AnimatedCoins from './animated-coins';
 
 const heroDashboardImage = PlaceHolderImages.find(img => img.id === 'hero_dashboard');
 
 export default function HeroSection() {
   return (
-    <section className="relative py-20 text-center md:py-32">
+    <section className="relative py-20 text-center md:py-32 overflow-hidden">
+      <AnimatedCoins />
       <div className="container relative z-10">
         <div className="mx-auto max-w-4xl">
           <h1 className="font-headline text-5xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl">

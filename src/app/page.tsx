@@ -4,6 +4,7 @@ import FeaturesSection from '@/components/landing/features-section';
 import PublicFooter from '@/components/landing/public-footer';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import TestimonialsSection from '@/components/landing/testimonials-section';
 
 function CtaSection() {
   return (
@@ -32,6 +33,7 @@ export default function LandingPage() {
       <main className="flex-1">
         <HeroSection />
         <FeaturesSection />
+        <TestimonialsSection />
         <CtaSection />
       </main>
       <PublicFooter />

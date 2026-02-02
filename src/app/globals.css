@@ -88,4 +88,19 @@
   .text-glow {
     text-shadow: 0 0 8px hsl(var(--primary) / 0.5), 0 0 20px hsl(var(--primary) / 0.3);
   }
+
+  @keyframes float-up {
+    from {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(-120vh); /* Go well above the viewport */
+      opacity: 0;
+    }
+  }
+
+  .coin {
+    animation-name: float-up;
+  }
 }
