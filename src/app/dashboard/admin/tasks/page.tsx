@@ -63,6 +63,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const taskSchema = z.object({
   name: z.string().min(3, 'Task name must be at least 3 characters'),
@@ -102,7 +103,7 @@ export default function AdminTasksPage() {
     },
   });
 
-  const isLoading = userLoading || tasksLoading;
+  const pageIsLoading = userLoading || tasksLoading;
 
   const handleOpenDialog = (task: Task | null = null) => {
     setEditingTask(task);
@@ -114,31 +115,32 @@ export default function AdminTasksPage() {
         requiredLevel: task.requiredLevel,
       });
     } else {
-      form.reset({
-        name: '',
-        description: '',
-        reward: 0,
-        requiredLevel: 0,
-      });
+      form.reset({ name: '', description: '', reward: 0, requiredLevel: 0 });
     }
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (taskId: string) => {
-    if (!firestore || !window.confirm('Are you sure you want to delete this task?')) {
+    if (!firestore) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firestore not available.' });
+      return;
+    }
+    if (!window.confirm('Are you sure you want to delete this task?')) {
       return;
     }
 
+    toast({ title: 'Deleting task...' });
     const taskDocRef = doc(firestore, 'tasks', taskId);
 
     try {
       await deleteDoc(taskDocRef);
       toast({ title: 'Task deleted successfully' });
-    } catch (serverError: any) {
+    } catch (error: any) {
+      console.error('Delete Failed:', error);
       toast({
         variant: 'destructive',
         title: 'Delete Failed',
-        description: 'You do not have permission to delete tasks.',
+        description: 'You do not have permission to delete tasks. See console for details.',
       });
       const permissionError = new FirestorePermissionError({
         path: taskDocRef.path,
@@ -150,49 +152,39 @@ export default function AdminTasksPage() {
 
   const onSubmit = async (values: TaskFormValues) => {
     if (!firestore) return;
+    
+    const operation = editingTask ? 'update' : 'create';
+    const toastTitle = editingTask ? 'Updating task...' : 'Creating task...';
+    toast({ title: toastTitle });
 
     try {
-        if (editingTask) {
+      if (editingTask) {
         const taskRef = doc(firestore, 'tasks', editingTask.id);
         await updateDoc(taskRef, values);
         toast({ title: 'Task updated successfully' });
-        } else {
+      } else {
         const taskRef = doc(collection(firestore, 'tasks'));
         const data = { id: taskRef.id, ...values };
         await setDoc(taskRef, data);
         toast({ title: 'Task created successfully' });
-        }
-        setIsDialogOpen(false);
-        setEditingTask(null);
-    } catch (serverError: any) {
-        const operation = editingTask ? 'update' : 'create';
-        toast({
-            variant: 'destructive',
-            title: `${operation === 'update' ? 'Update' : 'Creation'} Failed`,
-            description: `You do not have permission to ${operation} tasks.`,
-        });
-
-        const permissionError = new FirestorePermissionError({
-            path: editingTask ? `tasks/${editingTask.id}` : 'tasks',
-            operation: operation,
-            requestResourceData: values,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+      }
+      setIsDialogOpen(false);
+      setEditingTask(null);
+    } catch (error: any) {
+      console.error(`${operation} Failed:`, error);
+      const permissionError = new FirestorePermissionError({
+          path: editingTask ? `tasks/${editingTask.id}` : 'tasks',
+          operation: operation,
+          requestResourceData: values,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      toast({
+          variant: 'destructive',
+          title: `${operation === 'update' ? 'Update' : 'Creation'} Failed`,
+          description: `You do not have permission to ${operation} tasks.`,
+      });
     }
   };
-
-  if (isLoading) {
-    return <PageHeader title="Manage Tasks" description="Loading..." />;
-  }
-
-  if (user?.role !== 'admin') {
-    return (
-      <PageHeader
-        title="Unauthorized"
-        description="You do not have permission to view this page."
-      />
-    );
-  }
 
   const initialTasksToSeed = [
     { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0 },
@@ -208,13 +200,53 @@ export default function AdminTasksPage() {
   const seedDatabase = async () => {
     if (!firestore) return;
     toast({ title: 'Seeding tasks...' });
-    const promises = initialTasksToSeed.map((task) => {
-      const docRef = doc(firestore, 'tasks', task.id);
-      return setDoc(docRef, task, { merge: true });
-    });
-    await Promise.all(promises);
-    toast({ title: 'Tasks seeded successfully!' });
+    try {
+        const promises = initialTasksToSeed.map((task) => {
+          const docRef = doc(firestore, 'tasks', task.id);
+          return setDoc(docRef, task, { merge: true });
+        });
+        await Promise.all(promises);
+        toast({ title: 'Tasks seeded successfully!' });
+    } catch(error: any) {
+        console.error("Seeding failed:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Seeding Failed',
+            description: 'You do not have permission to create tasks.',
+        });
+        const permissionError = new FirestorePermissionError({
+            path: 'tasks',
+            operation: 'create',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    }
   };
+
+  if (pageIsLoading) {
+    return (
+        <>
+            <PageHeader title="Manage Tasks" description="Loading..." />
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-4 w-48" />
+                </CardHeader>
+                <CardContent>
+                    <Skeleton className="h-24 w-full" />
+                </CardContent>
+            </Card>
+        </>
+    );
+  }
+
+  if (user?.role !== 'admin') {
+    return (
+      <PageHeader
+        title="Unauthorized"
+        description="You do not have permission to view this page."
+      />
+    );
+  }
 
   return (
     <>
