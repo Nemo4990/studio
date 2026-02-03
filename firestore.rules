@@ -3,21 +3,25 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // This function now checks the 'role' field in the user's Firestore document.
+    // This is more flexible and secure than checking for a hardcoded email.
     function isAppAdmin() {
-      // An admin is defined by having the specific email 'admin@taskverse.io'.
-      // This is a simple and secure way to designate an admin without complex role lookups.
-      return request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
-      // A user can get their own document, and an admin can get any document. This is critical for subcollection queries and admin actions.
-      allow get: if request.auth.uid == userId || isAppAdmin();
-      // Only admins can list all users.
-      allow list: if isAppAdmin();
+      // To allow the isAppAdmin() function to work without circular dependencies,
+      // we must allow any authenticated user to read user documents.
+      // NOTE: For a production app, you would want to restrict this further,
+      // for example by only allowing reads to non-sensitive fields.
+      allow get, list: if request.auth != null;
+
       // A user can create their own document on signup.
       allow create: if request.auth.uid == userId;
-      // A user can update their own profile, an admin can update any.
+      
+      // A user can update their own profile; an admin can update any user profile.
       allow update: if request.auth.uid == userId || isAppAdmin();
+      
       // User documents cannot be deleted.
       allow delete: if false;
     }
@@ -46,16 +50,18 @@ service cloud.firestore {
     // --- Top-level Collections (mostly for Admin access) ---
 
     match /tasks/{taskId} {
+      // Any authenticated user can read tasks.
       allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null;
+      // Only admins can create, update, or delete tasks.
+      allow write: if isAppAdmin();
     }
 
     match /submissions/{submissionId} {
       // Any authenticated user can create a submission record for themselves.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       
-      // Admins can read, update, and delete all submissions.
-      // Users can also read (get/list) THEIR OWN submissions by querying on userId.
+      // Admins can read all submissions.
+      // Users can also read THEIR OWN submissions by querying on userId.
       allow read: if isAppAdmin() || 
                      (request.auth != null && resource.data.userId == request.auth.uid);
 

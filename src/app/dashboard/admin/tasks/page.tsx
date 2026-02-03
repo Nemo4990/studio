@@ -124,76 +124,60 @@ export default function AdminTasksPage() {
     setIsDialogOpen(true);
   };
 
-  const handleDelete = (taskId: string) => {
-    if (!firestore || !window.confirm('Are you sure you want to delete this task?'))
+  const handleDelete = async (taskId: string) => {
+    if (!firestore || !window.confirm('Are you sure you want to delete this task?')) {
       return;
+    }
 
     const taskDocRef = doc(firestore, 'tasks', taskId);
 
-    deleteDoc(taskDocRef)
-      .then(() => {
-        toast({ title: 'Task deleted successfully' });
-      })
-      .catch((serverError) => {
-        toast({
-            variant: 'destructive',
-            title: 'Delete Failed',
-            description: 'You do not have permission to delete tasks.'
-        });
-        const permissionError = new FirestorePermissionError({
-          path: taskDocRef.path,
-          operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+    try {
+      await deleteDoc(taskDocRef);
+      toast({ title: 'Task deleted successfully' });
+    } catch (serverError: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'You do not have permission to delete tasks.',
       });
+      const permissionError = new FirestorePermissionError({
+        path: taskDocRef.path,
+        operation: 'delete',
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    }
   };
 
-  const onSubmit = (values: TaskFormValues) => {
+  const onSubmit = async (values: TaskFormValues) => {
     if (!firestore) return;
 
-    if (editingTask) {
-      const taskRef = doc(firestore, 'tasks', editingTask.id);
-      updateDoc(taskRef, values)
-        .then(() => {
-          toast({ title: 'Task updated successfully' });
-          setIsDialogOpen(false);
-          setEditingTask(null);
-        })
-        .catch((serverError) => {
-           toast({
+    try {
+        if (editingTask) {
+        const taskRef = doc(firestore, 'tasks', editingTask.id);
+        await updateDoc(taskRef, values);
+        toast({ title: 'Task updated successfully' });
+        } else {
+        const taskRef = doc(collection(firestore, 'tasks'));
+        const data = { id: taskRef.id, ...values };
+        await setDoc(taskRef, data);
+        toast({ title: 'Task created successfully' });
+        }
+        setIsDialogOpen(false);
+        setEditingTask(null);
+    } catch (serverError: any) {
+        const operation = editingTask ? 'update' : 'create';
+        toast({
             variant: 'destructive',
-            title: 'Update Failed',
-            description: 'You do not have permission to update tasks.',
-          });
-          const permissionError = new FirestorePermissionError({
-            path: taskRef.path,
-            operation: 'update',
+            title: `${operation === 'update' ? 'Update' : 'Creation'} Failed`,
+            description: `You do not have permission to ${operation} tasks.`,
+        });
+
+        const permissionError = new FirestorePermissionError({
+            path: editingTask ? `tasks/${editingTask.id}` : 'tasks',
+            operation: operation,
             requestResourceData: values,
-          });
-          errorEmitter.emit('permission-error', permissionError);
         });
-    } else {
-      const taskRef = doc(collection(firestore, 'tasks'));
-      const data = { id: taskRef.id, ...values };
-      setDoc(taskRef, data)
-        .then(() => {
-          toast({ title: 'Task created successfully' });
-          setIsDialogOpen(false);
-          setEditingTask(null);
-        })
-        .catch((serverError) => {
-          toast({
-            variant: 'destructive',
-            title: 'Creation Failed',
-            description: 'You do not have permission to create tasks.',
-          });
-          const permissionError = new FirestorePermissionError({
-            path: taskRef.path,
-            operation: 'create',
-            requestResourceData: data,
-          });
-          errorEmitter.emit('permission-error', permissionError);
-        });
+        errorEmitter.emit('permission-error', permissionError);
     }
   };
 
