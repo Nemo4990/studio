@@ -10,15 +10,24 @@ function CtaSection() {
   return (
     <section className="py-20 md:py-32">
       <div className="container text-center">
-        <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          See where financial automation can <br /> take your business.
+        <h2
+          className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl opacity-0 animate-fade-in-up"
+          style={{ animationDelay: '0.2s' }}
+        >
+          Ready to start your earning journey?
         </h2>
-        <p className="mt-6 text-lg leading-8 text-muted-foreground">
-          The first financial tool for your business. And the last one you'll ever need.
+        <p
+          className="mt-6 text-lg leading-8 text-muted-foreground opacity-0 animate-fade-in-up"
+          style={{ animationDelay: '0.4s' }}
+        >
+          Join thousands of users who are turning their free time into crypto rewards.
         </p>
-        <div className="mt-10">
+        <div
+          className="mt-10 opacity-0 animate-fade-in-up"
+          style={{ animationDelay: '0.6s' }}
+        >
           <Button size="lg" asChild>
-            <Link href="/signup">Get Started</Link>
+            <Link href="/signup">Get Started for Free</Link>
           </Button>
         </div>
       </div>

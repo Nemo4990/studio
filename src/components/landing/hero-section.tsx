@@ -1,10 +1,6 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import AnimatedCoins from './animated-coins';
-
-const heroDashboardImage = PlaceHolderImages.find(img => img.id === 'hero_dashboard');
 
 export default function HeroSection() {
   return (
@@ -12,13 +8,22 @@ export default function HeroSection() {
       <AnimatedCoins />
       <div className="container relative z-10">
         <div className="mx-auto max-w-4xl">
-          <h1 className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl">
+          <h1
+            className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl opacity-0 animate-fade-in-up"
+            style={{ animationDelay: '0.2s' }}
+          >
             Unleash the power of <span className="text-glow">intuitive earning</span>
           </h1>
-          <p className="mt-6 text-lg leading-8 text-muted-foreground md:text-xl">
+          <p
+            className="mt-6 text-lg leading-8 text-muted-foreground md:text-xl opacity-0 animate-fade-in-up"
+            style={{ animationDelay: '0.4s' }}
+          >
             Say goodbye to complex crypto platforms. Complete simple tasks, manage your earnings like a pro. Simple, intuitive, and rewarding.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div
+            className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-fade-in-up"
+            style={{ animationDelay: '0.6s' }}
+          >
             <Button size="lg" asChild className="w-full sm:w-auto">
               <Link href="/signup">Get Started Today</Link>
             </Button>
@@ -27,21 +32,6 @@ export default function HeroSection() {
             </Button>
           </div>
         </div>
-
-        {heroDashboardImage && (
-            <div className="mt-16 sm:mt-20">
-                <Image
-                    src={heroDashboardImage.imageUrl}
-                    alt={heroDashboardImage.description}
-                    width={1200}
-                    height={700}
-                    className="mx-auto rounded-xl border border-white/10 shadow-2xl shadow-primary/10"
-                    data-ai-hint={heroDashboardImage.imageHint}
-                    priority
-                />
-            </div>
-        )}
-
       </div>
     </section>
   );

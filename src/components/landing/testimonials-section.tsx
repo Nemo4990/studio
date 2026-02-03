@@ -44,10 +44,16 @@ export default function TestimonialsSection() {
     <section id="testimonials" className="py-20 md:py-32">
       <div className="container">
         <div className="mx-auto max-w-2xl text-center">
-          <h2 className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+          <h2
+            className="font-headline text-3xl font-bold tracking-tight text-foreground sm:text-4xl opacity-0 animate-fade-in-up"
+            style={{ animationDelay: '0.2s' }}
+          >
             Loved by Crypto Earners Worldwide
           </h2>
-          <p className="mt-6 text-lg leading-8 text-foreground/70">
+          <p
+            className="mt-6 text-lg leading-8 text-foreground/70 opacity-0 animate-fade-in-up"
+            style={{ animationDelay: '0.4s' }}
+          >
             Don&apos;t just take our word for it. Here&apos;s what our users have to
             say about their experience with TaskVerse.
           </p>
