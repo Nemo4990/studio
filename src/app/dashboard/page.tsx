@@ -34,15 +34,15 @@ export default function UserDashboardPage() {
     <>
       <PageHeader title="Dashboard" description={`Welcome back, ${user.name}! Here's a summary of your account.`} />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard title="Current Level" value={`Level ${user.level}`} icon={Star} description="Complete tasks to level up" />
-        <StatCard title="Wallet Balance" value={`${user.walletBalance.toLocaleString()} Coins`} icon={Coins} description="Available for withdrawal" />
-        <StatCard title="Tasks Completed" value={0} icon={CheckCircle2} description="Keep up the great work!" />
-        <StatCard title="Total Earnings" value="0 Coins" icon={BarChart} description="All-time earnings" />
+        <StatCard title="Current Level" value={`Level ${user.level}`} icon={Star} description="Complete tasks to level up" className="card-glow" />
+        <StatCard title="Wallet Balance" value={`${user.walletBalance.toLocaleString()} Coins`} icon={Coins} description="Available for withdrawal" className="card-glow" />
+        <StatCard title="Tasks Completed" value={0} icon={CheckCircle2} description="Keep up the great work!" className="card-glow" />
+        <StatCard title="Total Earnings" value="0 Coins" icon={BarChart} description="All-time earnings" className="card-glow" />
       </div>
 
       {user.level === 0 && (
         <div className="mt-8">
-            <Card className="bg-primary/10 border-primary/20">
+            <Card className="card-glow bg-primary/10 border-primary/20">
                 <CardHeader>
                     <CardTitle className="font-headline text-primary">Welcome to TaskVerse!</CardTitle>
                     <CardDescription>Your journey starts here. Make your first deposit to level up and unlock more rewarding tasks.</CardDescription>

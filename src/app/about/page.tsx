@@ -21,11 +21,11 @@ export default function AboutPage() {
               priority
             />
           )}
-          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-black/70" />
           <div className="container relative z-10">
             <div className="mx-auto max-w-3xl">
               <h1
-                className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl opacity-0 animate-fade-in-up"
+                className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl opacity-0 animate-fade-in-up text-glow"
                 style={{ animationDelay: '0.2s' }}
               >
                 About TaskVerse

@@ -82,7 +82,7 @@ export default function SignalScavengerGame() {
   };
   
   return (
-    <Card className="w-full max-w-4xl bg-black/30 backdrop-blur-sm text-white border-white/20">
+    <Card className="w-full max-w-4xl bg-card/50 backdrop-blur-lg border-border">
       <CardContent className="p-6 md:p-8">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {scavengerTiles.map(tile => {
@@ -94,16 +94,16 @@ export default function SignalScavengerGame() {
                 disabled={isClicked}
                 className={cn(
                   'relative group aspect-square rounded-lg border-2 p-4 flex flex-col justify-end items-start text-left transition-all duration-300 overflow-hidden',
-                  'bg-black/20 border-white/20 hover:bg-black/40 hover:border-white/40',
-                  'disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-black/20 disabled:hover:border-green-500/50',
+                  'bg-card/70 border-border hover:bg-muted/50 hover:border-primary',
+                  'disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:bg-card/70 disabled:hover:border-green-500/50',
                   isClicked && 'border-green-500/50 bg-green-500/10'
                 )}
               >
                 <div className="absolute top-2 right-2 transition-opacity duration-300">
-                    {isClicked ? <CheckCircle className="size-5 text-green-500" /> : <ExternalLink className="size-4 text-white/50 group-hover:text-white" />}
+                    {isClicked ? <CheckCircle className="size-5 text-green-500" /> : <ExternalLink className="size-4 text-muted-foreground group-hover:text-foreground" />}
                 </div>
                 <h3 className="font-bold text-sm md:text-base">{tile.name}</h3>
-                <p className="text-xs text-white/60">Visit site</p>
+                <p className="text-xs text-muted-foreground">Visit site</p>
               </button>
             );
           })}

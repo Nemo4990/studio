@@ -179,7 +179,7 @@ export default function SpeedmathGame() {
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 placeholder="Your Answer"
-                className="text-2xl h-14 text-center"
+                className="text-2xl h-14 text-center bg-background/50"
                 autoFocus
               />
             </form>
@@ -215,7 +215,7 @@ export default function SpeedmathGame() {
   };
 
   return (
-    <Card className="w-full max-w-2xl bg-black/30 backdrop-blur-sm text-white border-white/20">
+    <Card className="w-full max-w-2xl bg-card/50 backdrop-blur-lg border-border text-foreground">
       <CardContent className="p-8 flex flex-col items-center justify-center min-h-[350px]">
         {renderContent()}
       </CardContent>

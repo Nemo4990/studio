@@ -156,7 +156,7 @@ function LiveCryptoChart() {
     };
     
     return (
-        <Card>
+        <Card className="card-glow">
             <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -190,7 +190,7 @@ function LiveCryptoChart() {
 
 function MarketDataTable() {
     return (
-        <Card>
+        <Card className="card-glow">
             <CardHeader>
                 <CardTitle className="font-headline">Live Market</CardTitle>
                 <CardDescription>Real-time data for top cryptocurrencies.</CardDescription>
@@ -243,7 +243,7 @@ export default function MarketPage() {
         <section className="bg-secondary py-20 text-center md:py-32">
           <div className="container">
             <div className="mx-auto max-w-3xl">
-              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-glow">
                 Explore the Crypto Market
               </h1>
               <p className="mt-6 text-lg leading-8 text-foreground/70">

@@ -18,7 +18,7 @@ export default function SignalScavengerPage() {
             <SignalScavengerGame />
           </div>
       </div>
-       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900/50 to-slate-900 -z-10" />
+       <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/20 to-background -z-10" />
     </div>
   );
 }

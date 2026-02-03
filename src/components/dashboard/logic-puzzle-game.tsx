@@ -111,8 +111,8 @@ export default function LogicPuzzleGame() {
                 className="grid grid-cols-1 gap-3"
               >
                 {shuffledOptions.map((option) => (
-                  <Label key={option} htmlFor={option} className="flex items-center space-x-3 p-4 border border-white/20 rounded-lg cursor-pointer hover:bg-white/10 has-[:checked]:bg-primary has-[:checked]:border-primary transition-colors">
-                      <RadioGroupItem value={option} id={option} className="border-white/50 text-primary-foreground" />
+                  <Label key={option} htmlFor={option} className="flex items-center space-x-3 p-4 border border-border rounded-lg cursor-pointer hover:bg-muted/50 has-[:checked]:bg-primary has-[:checked]:border-primary has-[:checked]:text-primary-foreground transition-colors">
+                      <RadioGroupItem value={option} id={option} className="border-foreground text-primary" />
                       <span className="text-base">{option}</span>
                   </Label>
                 ))}
@@ -124,10 +124,10 @@ export default function LogicPuzzleGame() {
                     <Lightbulb className="mr-2 size-4" /> Need a hint?
                 </Button>
                 {showHint && (
-                    <Alert className="mt-4 text-left max-w-sm mx-auto bg-black/20 border-white/20">
-                        <Lightbulb className="h-4 w-4 text-amber-300" />
-                        <AlertTitle className="text-amber-300">Hint</AlertTitle>
-                        <AlertDescription className="text-white/80">
+                    <Alert className="mt-4 text-left max-w-sm mx-auto bg-card/50 border-border">
+                        <Lightbulb className="h-4 w-4 text-primary" />
+                        <AlertTitle className="text-primary">Hint</AlertTitle>
+                        <AlertDescription>
                             {puzzle.hint}
                         </AlertDescription>
                     </Alert>
@@ -151,7 +151,7 @@ export default function LogicPuzzleGame() {
                 <>
                     <XCircle className="size-16 text-destructive mb-4" />
                     <h2 className="font-headline text-3xl font-bold mb-2">Not Quite...</h2>
-                    <p className="text-muted-foreground mb-6">That wasn't the right answer. The correct answer was: <strong className="text-white">{puzzle?.correctAnswer}</strong>.</p>
+                    <p className="text-muted-foreground mb-6">That wasn't the right answer. The correct answer was: <strong className="text-foreground">{puzzle?.correctAnswer}</strong>.</p>
                     <Button onClick={startGame} variant="outline">Try Another Puzzle</Button>
                 </>
             )}
@@ -162,7 +162,7 @@ export default function LogicPuzzleGame() {
       default:
         return (
           <div className="text-center flex flex-col items-center">
-            <BrainCircuit className="size-16 mb-4" />
+            <BrainCircuit className="size-16 mb-4 text-primary" />
             <h2 className="font-headline text-3xl font-bold mb-4">Logic Puzzle Challenge</h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">A riddle will be presented. Solve it to prove your critical thinking skills and earn a reward.</p>
             <Button size="lg" onClick={startGame}>Start Challenge</Button>
@@ -172,7 +172,7 @@ export default function LogicPuzzleGame() {
   };
 
   return (
-    <Card className="w-full max-w-2xl bg-black/30 backdrop-blur-sm text-white border-white/20">
+    <Card className="w-full max-w-2xl bg-card/50 backdrop-blur-lg border-border">
       <CardContent className="p-8 flex flex-col items-center justify-center min-h-[400px]">
         {renderContent()}
       </CardContent>

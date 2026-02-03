@@ -66,7 +66,7 @@ export default function ContactPage() {
         <section className="bg-secondary py-20 text-center md:py-32">
           <div className="container">
             <div className="mx-auto max-w-3xl">
-              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-glow">
                 Get in Touch
               </h1>
               <p className="mt-6 text-lg leading-8 text-foreground/70">
@@ -79,7 +79,7 @@ export default function ContactPage() {
 
         <section className="py-20">
           <div className="container">
-            <Card className="mx-auto max-w-xl">
+            <Card className="mx-auto max-w-xl card-glow">
               <CardHeader>
                 <CardTitle className="font-headline">Contact Us</CardTitle>
                 <CardDescription>

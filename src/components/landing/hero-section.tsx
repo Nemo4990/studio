@@ -12,7 +12,7 @@ export default function HeroSection() {
             className="font-headline text-4xl font-bold tracking-tight text-foreground sm:text-6xl md:text-7xl opacity-0 animate-fade-in-up"
             style={{ animationDelay: '0.2s' }}
           >
-            Unleash the power of <span className="text-glow">intuitive earning</span>
+            Enter the NovaChain. Earn the <span className="text-glow">Future</span>.
           </h1>
           <p
             className="mt-6 text-lg leading-8 text-muted-foreground md:text-xl opacity-0 animate-fade-in-up"

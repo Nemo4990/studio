@@ -65,7 +65,7 @@ export default function FeaturesSection() {
                 <div
                   key={feature.title}
                   className={cn(
-                    'lg:col-span-6 flex flex-col rounded-xl border bg-card text-card-foreground shadow-sm transition-transform hover:scale-[1.02] hover:shadow-lg',
+                    'card-glow lg:col-span-6 flex flex-col rounded-xl border bg-card text-card-foreground shadow-lg transition-transform hover:scale-[1.02] hover:shadow-primary/20',
                     i > 1 && 'lg:mt-16'
                   )}
                 >

@@ -40,7 +40,7 @@ export default function CareersPage() {
         <section className="bg-secondary py-20 text-center md:py-32">
           <div className="container">
             <div className="mx-auto max-w-3xl">
-              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl">
+              <h1 className="font-headline text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl text-glow">
                 Join Our Team
               </h1>
               <p className="mt-6 text-lg leading-8 text-foreground/70">
@@ -57,7 +57,7 @@ export default function CareersPage() {
             </h2>
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {openPositions.map((position) => (
-                <Card key={position.title} className="flex flex-col">
+                <Card key={position.title} className="flex flex-col card-glow">
                   <CardHeader>
                     <CardTitle className="font-headline">{position.title}</CardTitle>
                     <CardDescription>{position.department} &middot; {position.location}</CardDescription>

@@ -185,9 +185,9 @@ export default function MemoryPatternGame() {
                   key={index}
                   onClick={() => handleTileClick(index)}
                   className={cn(
-                    'h-20 w-20 sm:h-24 sm:w-24 rounded-lg border-2 border-white/20 transition-colors duration-200',
-                    gameState === 'awaiting-input' && 'cursor-pointer hover:bg-white/20',
-                    activeTile === index ? 'bg-primary border-primary' : 'bg-white/10'
+                    'h-20 w-20 sm:h-24 sm:w-24 rounded-lg border-2 border-border transition-colors duration-200',
+                    gameState === 'awaiting-input' && 'cursor-pointer hover:bg-muted/50',
+                    activeTile === index ? 'bg-primary border-primary' : 'bg-card/80'
                   )}
                 />
               ))}
@@ -215,7 +215,7 @@ export default function MemoryPatternGame() {
       default:
         return (
           <div className="text-center flex flex-col items-center">
-            <BrainCircuit className="size-16 mb-4" />
+            <BrainCircuit className="size-16 mb-4 text-primary" />
             <h2 className="font-headline text-3xl font-bold mb-4">Memory Pattern Recall</h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">Memorize the sequence of glowing tiles. Repeat the pattern to advance to the next level. Reach level {MIN_LEVEL_TO_PASS} to win the reward.</p>
             <Button size="lg" onClick={startGame}>Start Challenge</Button>
@@ -225,7 +225,7 @@ export default function MemoryPatternGame() {
   };
 
   return (
-    <Card className="w-full max-w-2xl bg-black/30 backdrop-blur-sm text-white border-white/20">
+    <Card className="w-full max-w-2xl bg-card/50 backdrop-blur-lg border-border">
       <CardContent className="p-4 sm:p-8 flex flex-col items-center justify-center min-h-[480px]">
         {renderContent()}
       </CardContent>
