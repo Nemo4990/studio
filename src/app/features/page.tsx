@@ -1,3 +1,4 @@
+
 'use client';
 
 import PublicFooter from '@/components/landing/public-footer';
@@ -27,10 +28,14 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
 import { LogoScroller } from '@/components/landing/logo-scroller';
+import {
+  ChartContainer,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 
 // --- LOGO COMPONENTS ---
 const BitcoinLogo = () => (
@@ -133,27 +138,18 @@ const marketData = [
 
 type Coin = 'BTC' | 'ETH' | 'SOL';
 
+const chartConfig = {
+  price: {
+    label: 'Price',
+    color: 'hsl(var(--primary))',
+  },
+} satisfies ChartConfig;
+
 // --- PAGE COMPONENTS ---
 function LiveCryptoChart() {
     const [activeCoin, setActiveCoin] = useState<Coin>('BTC');
     const data = chartData[activeCoin];
     const latestPrice = data[data.length - 1].price;
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            return (
-            <div className="rounded-lg border bg-background/90 p-2 shadow-sm backdrop-blur-sm">
-                <div className="grid grid-cols-2 gap-2">
-                <div className="flex flex-col space-y-1">
-                    <span className="text-[0.70rem] uppercase text-muted-foreground">{label}</span>
-                    <span className="font-bold text-muted-foreground">${payload[0].value.toLocaleString()}</span>
-                </div>
-                </div>
-            </div>
-            );
-        }
-        return null;
-    };
     
     return (
         <Card className="card-glow">
@@ -173,15 +169,43 @@ function LiveCryptoChart() {
             <CardContent>
                 <div className="text-3xl font-bold text-foreground mb-2">${latestPrice.toLocaleString()}</div>
                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer>
-                        <LineChart data={data}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
-                            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value/1000}k`} />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Line type="monotone" dataKey="price" strokeWidth={2} stroke="hsl(var(--primary))" dot={false} />
+                    <ChartContainer config={chartConfig}>
+                        <LineChart
+                          accessibilityLayer
+                          data={data}
+                          margin={{
+                            left: 12,
+                            right: 12,
+                          }}
+                        >
+                          <CartesianGrid vertical={false} />
+                          <XAxis
+                            dataKey="name"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => value.split(' ').pop() ?? ''}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => `$${value / 1000}k`}
+                            domain={['dataMin - 5000', 'dataMax + 5000']}
+                          />
+                          <Tooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Line
+                            dataKey="price"
+                            type="natural"
+                            stroke="var(--color-price)"
+                            strokeWidth={2}
+                            dot={false}
+                          />
                         </LineChart>
-                    </ResponsiveContainer>
+                      </ChartContainer>
                 </div>
             </CardContent>
         </Card>
@@ -286,3 +310,5 @@ export default function MarketPage() {
     </div>
   );
 }
+
+    
