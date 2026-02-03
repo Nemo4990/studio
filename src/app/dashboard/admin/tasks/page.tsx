@@ -68,7 +68,7 @@ const taskSchema = z.object({
   name: z.string().min(3, 'Task name must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   reward: z.coerce.number().min(0, 'Reward must be a positive number'),
-  requiredLevel: z.coerce.number().min(1, 'Level must be at least 1'),
+  requiredLevel: z.coerce.number().min(0, 'Level must be at least 0'),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -98,7 +98,7 @@ export default function AdminTasksPage() {
       name: '',
       description: '',
       reward: 0,
-      requiredLevel: 1,
+      requiredLevel: 0,
     },
   });
 
@@ -118,7 +118,7 @@ export default function AdminTasksPage() {
         name: '',
         description: '',
         reward: 0,
-        requiredLevel: 1,
+        requiredLevel: 0,
       });
     }
     setIsDialogOpen(true);
@@ -195,12 +195,12 @@ export default function AdminTasksPage() {
   }
 
   const initialTasksToSeed = [
-    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 1 },
-    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 1 },
-    { id: 'scavenger-1', name: 'Signal Scavenger', description: 'Visit our partners to find the signal. Click all 12 tiles to claim your reward.', reward: 500, requiredLevel: 1 },
-    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 1 },
-    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 1 },
-    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 1 },
+    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0 },
+    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0 },
+    { id: 'scavenger-1', name: 'Signal Scavenger', description: 'Visit our partners to find the signal. Click all 12 tiles to claim your reward.', reward: 500, requiredLevel: 0 },
+    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0 },
+    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0 },
+    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0 },
     { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2 },
     { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3 },
   ];
@@ -367,7 +367,7 @@ export default function AdminTasksPage() {
                     <FormItem>
                       <FormLabel>Required Level</FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="1" {...field} />
+                        <Input type="number" placeholder="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
