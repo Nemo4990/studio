@@ -23,6 +23,7 @@ import type { Task, TaskSubmission } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { PurchaseTrialsDialog } from '@/components/dashboard/purchase-trials-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
 
 const GAME_TASK_IDS = ['11', '12', '13'];
 
@@ -34,6 +35,7 @@ export default function TasksPage() {
 
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
+  const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
 
   const tasksQuery = useMemoFirebase(
     () => firestore ? collection(firestore, 'tasks') : null,
@@ -222,6 +224,11 @@ export default function TasksPage() {
         if (isGameTask && task.trialsLeft <= 0) {
             return <Button className="w-full" onClick={() => setPurchaseTask(task)}><RefreshCw className="mr-2"/>Purchase More Trials</Button>;
         }
+        
+        const isNebulaLedgerTask = task.id.startsWith('nl-');
+        if (isNebulaLedgerTask) {
+            return <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>;
+        }
 
         if (task.id === '1') {
             const twentyFourHours = 24 * 60 * 60 * 1000;
@@ -289,6 +296,22 @@ export default function TasksPage() {
             onClose={() => setPurchaseTask(null)}
             task={purchaseTask}
             user={user}
+        />
+      )}
+      
+      {nebulaLedgerTask && (
+        <NebulaLedgerDialog
+            isOpen={!!nebulaLedgerTask}
+            onClose={() => setNebulaLedgerTask(null)}
+            task={nebulaLedgerTask}
+            onSubmitSuccess={(reward, message) => {
+                handleSubmit(nebulaLedgerTask.id, nebulaLedgerTask.name, reward);
+                setNebulaLedgerTask(null);
+                toast({
+                    title: 'Decryption Successful!',
+                    description: message
+                })
+            }}
         />
       )}
 

@@ -196,6 +196,9 @@ export default function AdminTasksPage() {
     { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0 },
     { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0 },
     { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0 },
+    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0 },
+    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 1 },
+    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 2 },
     { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2 },
     { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3 },
   ];
