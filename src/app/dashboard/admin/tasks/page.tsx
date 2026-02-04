@@ -64,6 +64,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useRouter } from 'next/navigation';
 
 const taskSchema = z.object({
   name: z.string().min(3, 'Task name must be at least 3 characters'),
@@ -78,6 +79,7 @@ export default function AdminTasksPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -135,6 +137,7 @@ export default function AdminTasksPage() {
     try {
       await deleteDoc(taskDocRef);
       toast({ title: 'Task deleted successfully' });
+      router.refresh();
     } catch (error: any) {
       console.error('Delete Failed:', error);
       toast({
