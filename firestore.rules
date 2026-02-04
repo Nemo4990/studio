@@ -6,12 +6,13 @@ service cloud.firestore {
     // This function now checks the 'role' field in the user's Firestore document.
     // This is more flexible and secure than checking for a hardcoded email.
     function isAppAdmin() {
+      // This 'get' call is why the /users/{userId} read rule below is necessary.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
-      // To allow the isAppAdmin() function to work without circular dependencies,
-      // we must allow any authenticated user to read user documents.
+      // To allow the isAppAdmin() function to work, we must allow any authenticated
+      // user to read user documents.
       // NOTE: For a production app, you would want to restrict this further,
       // for example by only allowing reads to non-sensitive fields.
       allow get, list: if request.auth != null;
