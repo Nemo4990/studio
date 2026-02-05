@@ -4,28 +4,36 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAppAdmin() {
+      // Check if the user is authenticated and if their user document has the 'admin' role.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
+      // Any authenticated user can read user profiles (needed for isAppAdmin).
       allow get, list: if request.auth != null;
+      // A user can create their own profile.
       allow create: if request.auth.uid == userId;
+      // A user can update their own profile, or an admin can update any profile.
       allow update: if request.auth.uid == userId || isAppAdmin();
+      // Deleting users is not allowed from the client.
       allow delete: if false;
     }
     
     // --- User Subcollections ---
     
     match /users/{userId}/testimonials/{testimonialId} {
+      // Users can manage their own testimonials.
       allow read, write: if request.auth.uid == userId;
     }
 
     match /users/{userId}/deposits/{depositId} {
+        // Users can create and read their own deposits. Admins can update them.
         allow read, create: if request.auth.uid == userId;
         allow update: if isAppAdmin();
     }
 
     match /users/{userId}/withdrawals/{withdrawalId} {
+        // Users can create and read their own withdrawals. Admins can update them.
         allow read, create: if request.auth.uid == userId;
         allow update: if isAppAdmin();
     }
@@ -33,29 +41,39 @@ service cloud.firestore {
     // --- Top-level Collections ---
 
     match /tasks/{taskId} {
+      // Any authenticated user can read tasks.
       allow read: if request.auth != null;
-      // Allow any authenticated user to create, update, or delete tasks to unblock admin functionality
-      allow write: if request.auth != null;
+      // ONLY admins can create, update, or delete tasks.
+      allow write: if isAppAdmin();
     }
 
     match /submissions/{submissionId} {
+      // A user can create their own submission.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // An admin can read any submission. A user can only read their own.
       allow read: if isAppAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
+      // Only admins can approve/reject (update) or delete submissions.
       allow update, delete: if isAppAdmin();
     }
     
     match /deposits/{depositId} {
+      // Users can create their own deposit record in the top-level collection.
       allow create: if request.auth.uid == request.resource.data.userId;
+      // Only admins can read, update, or delete from the top-level collection.
       allow read, update, delete: if isAppAdmin();
     }
     
     match /withdrawals/{withdrawalId} {
+      // Users can create their own withdrawal record in the top-level collection.
       allow create: if request.auth.uid == request.resource.data.userId;
+      // Only admins can read, update, or delete from the top-level collection.
       allow read, update, delete: if isAppAdmin();
     }
 
     match /agents/{agentId} {
+      // Any authenticated user can read agent information.
       allow read: if request.auth != null;
+      // Only admins can add or change agents.
       allow write: if isAppAdmin();
     }
 

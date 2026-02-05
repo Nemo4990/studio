@@ -133,16 +133,21 @@ export default function AdminTasksPage() {
         operation: 'delete',
       });
       errorEmitter.emit('permission-error', permissionError);
+      // The listener will throw the error, and a global error handler should catch it.
+      // A toast is still useful for immediate feedback.
       toast({
         variant: 'destructive',
         title: 'Delete Failed',
-        description: 'You do not have permission to delete tasks.',
+        description: 'You do not have permission to delete tasks. Check the console for details.',
       });
     }
   };
 
   const onSubmit = async (values: TaskFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !user || user.role !== 'admin') {
+      toast({ variant: 'destructive', title: 'Permission Denied', description: 'You must be an admin to perform this action.' });
+      return;
+    }
     
     const operation = editingTask ? 'update' : 'create';
     const toastTitle = editingTask ? 'Updating task...' : 'Creating task...';
@@ -172,7 +177,7 @@ export default function AdminTasksPage() {
       toast({
           variant: 'destructive',
           title: `${operation === 'update' ? 'Update' : 'Creation'} Failed`,
-          description: `You do not have permission to ${operation} tasks.`,
+          description: `You do not have permission to ${operation} tasks. Check security rules.`,
       });
     }
   };
@@ -195,17 +200,19 @@ export default function AdminTasksPage() {
     if (!firestore || !tasksQuery) return;
     toast({ title: 'Seeding tasks...' });
     try {
-        const existingTasks = await getDocs(tasksQuery);
-        if (!existingTasks.empty) {
-            toast({ variant: 'destructive', title: 'Seeding Failed', description: 'Tasks collection is not empty.' });
+        const existingTasksSnapshot = await getDocs(tasksQuery);
+        if (!existingTasksSnapshot.empty) {
+            toast({ variant: 'destructive', title: 'Seeding Aborted', description: 'Tasks collection is not empty. Please clear it before seeding.' });
             return;
         }
 
-        const promises = initialTasksToSeed.map((task) => {
+        const batch = new (await import('firebase/firestore')).WriteBatch(firestore);
+        initialTasksToSeed.forEach((task) => {
           const docRef = doc(firestore, 'tasks', task.id);
-          return setDoc(docRef, task, { merge: true });
+          batch.set(docRef, task);
         });
-        await Promise.all(promises);
+        await batch.commit();
+
         toast({ title: 'Tasks seeded successfully!' });
     } catch(error: any) {
         console.error("Seeding failed:", error);
@@ -245,12 +252,12 @@ export default function AdminTasksPage() {
         <CardHeader>
           <CardTitle className="font-headline">All Tasks</CardTitle>
           <CardDescription>
-            A list of all tasks currently in the system.
+            A list of all tasks currently in the system. Changes here are reflected live for all users.
           </CardDescription>
         </CardHeader>
         <CardContent>
           {pageIsLoading ? (
-             <Skeleton className="h-24 w-full" />
+             <Skeleton className="h-48 w-full" />
           ) : tasks && tasks.length > 0 ? (
             <Table>
               <TableHeader>
@@ -258,9 +265,7 @@ export default function AdminTasksPage() {
                   <TableHead>Title</TableHead>
                   <TableHead>Reward</TableHead>
                   <TableHead>Min. Level</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -279,7 +284,7 @@ export default function AdminTasksPage() {
                       </div>
                     </TableCell>
                     <TableCell>Level {task.requiredLevel}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
