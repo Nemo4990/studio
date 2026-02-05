@@ -15,7 +15,7 @@ import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, runTransaction, Timestamp, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task, TaskSubmission, User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -43,6 +43,7 @@ export default function TasksPage() {
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
   const [personalizedTaskOrder, setPersonalizedTaskOrder] = useState<string[] | null>(null); // AI task order
   const [isPersonalizing, setIsPersonalizing] = useState(true); // Loading state for AI
+  const personalizationRan = useRef(false); // Flag to ensure AI call only runs once.
 
   // Fetch all tasks
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
@@ -59,7 +60,9 @@ export default function TasksPage() {
 
   // Effect to call the personalization AI flow
   useEffect(() => {
-    if (!isLoading && user && tasks) {
+    // Only run this effect if data is loaded AND the AI call hasn't run yet.
+    if (!isLoading && user && tasks && !personalizationRan.current) {
+      personalizationRan.current = true; // Set the flag so it doesn't run again
       setIsPersonalizing(true);
       
       const aiInput: PersonalizeTasksClientInput = {
@@ -89,6 +92,10 @@ export default function TasksPage() {
         .finally(() => {
           setIsPersonalizing(false);
         });
+    } else if (!isLoading) {
+      // If we're done loading but the effect didn't run (e.g. because it already ran),
+      // ensure the loading spinner is turned off.
+      setIsPersonalizing(false);
     }
   }, [isLoading, user, tasks]);
 
