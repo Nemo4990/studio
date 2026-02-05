@@ -67,7 +67,7 @@ export default function TasksPage() {
           level: user.level,
           walletBalance: user.walletBalance,
           taskAttempts: user.taskAttempts,
-          lastDailyCheckin: user.lastDailyCheckin ? (user.lastDailyCheckin as any).toDate().toISOString() : undefined,
+          lastDailyCheckin: user.lastDailyCheckin ? (user.lastDailyCheckin as any).toISOString() : undefined,
         },
         tasks: tasks.map(t => ({
           id: t.id,
@@ -104,12 +104,15 @@ export default function TasksPage() {
 
     const baseProcessedTasks = tasks
       .map(task => {
-        const isCompleted = submittedTaskIds.has(task.id);
+        const isGameTask = GAME_TASK_IDS.includes(task.id);
+        
+        // A game task is repeatable, so it's never "completed" in the same way as a one-off task.
+        const isCompleted = !isGameTask && submittedTaskIds.has(task.id);
         const isLocked = user.level < task.requiredLevel;
         const status = isCompleted ? 'completed' : isLocked ? 'locked' : 'available';
 
         let trialsLeft: number | undefined;
-        if (GAME_TASK_IDS.includes(task.id)) {
+        if (isGameTask) {
           const attempts = user.taskAttempts?.[task.id] ?? 0;
           trialsLeft = 3 - attempts;
         }
