@@ -6,8 +6,6 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
-import PageHeader from '@/components/dashboard/page-header';
 
 export default function DashboardLayout({
   children,
@@ -18,17 +16,21 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
+    // Redirect to login if auth check is complete and there's no user.
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
 
   if (error) {
-    // For now, a simple redirect is fine
+    // If there's an auth error, redirect.
     router.push('/login');
-    return null; // or a loading spinner while redirecting
+    return null;
   }
-
+  
+  // Always render the layout structure.
+  // The children (pages) are responsible for their own loading states.
+  // The AppSidebar and AppHeader internally handle the case where `user` is null during the loading phase.
   return (
     <SidebarProvider>
       <AppSidebar user={user} />
@@ -36,20 +38,12 @@ export default function DashboardLayout({
         <div className="flex flex-col">
           <AppHeader user={user} />
           <main className="flex-1 p-4 sm:px-6 sm:py-0">
-            {loading || !user ? (
-              // This is the key change: render skeleton *inside* the layout
-              <div>
-                 <PageHeader title="Loading Dashboard..." description="Please wait while we fetch your data." />
-                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Skeleton className="h-32"/>
-                    <Skeleton className="h-32"/>
-                    <Skeleton className="h-32"/>
-                    <Skeleton className="h-32"/>
-                </div>
-              </div>
-            ) : (
-              children
-            )}
+            {/* 
+              Always render children. The child page will show its own skeleton.
+              This prevents the page from unmounting and remounting, which was
+              causing the AI personalization to run multiple times.
+            */}
+            {children}
           </main>
         </div>
       </SidebarInset>
