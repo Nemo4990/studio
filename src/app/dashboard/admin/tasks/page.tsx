@@ -1,7 +1,7 @@
 'use client';
 
 import PageHeader from '@/components/dashboard/page-header';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -32,8 +32,9 @@ import {
   deleteDoc,
   updateDoc,
   getDocs,
+  writeBatch,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle, Coins } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Coins, Trash2 } from 'lucide-react';
 import React, { useState } from 'react';
 import type { Task } from '@/lib/types';
 import {
@@ -50,6 +51,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
@@ -65,6 +76,7 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const taskSchema = z.object({
   name: z.string().min(3, 'Task name must be at least 3 characters'),
@@ -80,8 +92,10 @@ export default function AdminTasksPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deleteAlert, setDeleteAlert] = useState<{ open: boolean; task: Task | 'all' | null }>({ open: false, task: null });
+
 
   const tasksQuery = useMemoFirebase(
     () => (firestore ? collection(firestore, 'tasks') : null),
@@ -101,7 +115,7 @@ export default function AdminTasksPage() {
 
   const pageIsLoading = userLoading || tasksLoading;
 
-  const handleOpenDialog = (task: Task | null = null) => {
+  const handleOpenForm = (task: Task | null = null) => {
     setEditingTask(task);
     if (task) {
       form.reset({
@@ -113,35 +127,78 @@ export default function AdminTasksPage() {
     } else {
       form.reset({ name: '', description: '', reward: 0, requiredLevel: 0 });
     }
-    setIsDialogOpen(true);
+    setIsFormOpen(true);
   };
 
-  const handleDelete = async (taskId: string) => {
-    if (!firestore) return;
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
+  const handleConfirmDelete = () => {
+    if (!deleteAlert.task) return;
 
-    toast({ title: 'Deleting task...' });
-    const taskDocRef = doc(firestore, 'tasks', taskId);
+    if (deleteAlert.task === 'all') {
+      handleDeleteAllTasks();
+    } else {
+      handleDeleteTask(deleteAlert.task);
+    }
+    setDeleteAlert({ open: false, task: null });
+  }
+
+  const handleDeleteTask = async (task: Task) => {
+    if (!firestore) return;
+    
+    toast({ title: `Deleting task "${task.name}"...` });
+    const taskDocRef = doc(firestore, 'tasks', task.id);
 
     try {
-      await deleteDoc(taskDocRef);
-      toast({ title: 'Task deleted successfully' });
+        await deleteDoc(taskDocRef);
+        toast({ title: 'Task deleted successfully' });
     } catch (error: any) {
-      console.error('Delete Failed:', error);
-      const permissionError = new FirestorePermissionError({
-        path: taskDocRef.path,
-        operation: 'delete',
-      });
-      errorEmitter.emit('permission-error', permissionError);
-      // The listener will throw the error, and a global error handler should catch it.
-      // A toast is still useful for immediate feedback.
-      toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: 'You do not have permission to delete tasks. Check the console for details.',
-      });
+        console.error('Delete Failed:', error);
+        const permissionError = new FirestorePermissionError({
+            path: taskDocRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            variant: 'destructive',
+            title: 'Delete Failed',
+            description: 'You do not have permission to delete this task.',
+        });
     }
   };
+
+  const handleDeleteAllTasks = async () => {
+    if (!firestore || !tasksQuery) return;
+    toast({ title: 'Deleting all tasks...' });
+
+    try {
+      const allTasksSnapshot = await getDocs(tasksQuery);
+      if (allTasksSnapshot.empty) {
+          toast({ title: 'No tasks to delete.' });
+          return;
+      }
+      
+      const batch = writeBatch(firestore);
+      allTasksSnapshot.docs.forEach(doc => {
+        batch.delete(doc.ref);
+      });
+      
+      await batch.commit();
+
+      toast({ title: 'All tasks deleted successfully!' });
+    } catch (error: any) {
+        console.error("Delete All Failed:", error);
+        const permissionError = new FirestorePermissionError({
+            path: 'tasks',
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            variant: 'destructive',
+            title: 'Deletion Failed',
+            description: 'You do not have permission to delete all tasks.',
+        });
+    }
+  };
+
 
   const onSubmit = async (values: TaskFormValues) => {
     if (!firestore || !user || user.role !== 'admin') {
@@ -164,7 +221,7 @@ export default function AdminTasksPage() {
         await setDoc(taskRef, data);
         toast({ title: 'Task created successfully' });
       }
-      setIsDialogOpen(false);
+      setIsFormOpen(false);
       setEditingTask(null);
     } catch (error: any) {
       console.error(`${operation} Failed:`, error);
@@ -205,7 +262,7 @@ export default function AdminTasksPage() {
             return;
         }
 
-        const batch = new (await import('firebase/firestore')).WriteBatch(firestore);
+        const batch = writeBatch(firestore);
         initialTasksToSeed.forEach((task) => {
           const docRef = doc(firestore, 'tasks', task.id);
           batch.set(docRef, task);
@@ -242,9 +299,13 @@ export default function AdminTasksPage() {
         title="Manage Tasks"
         description="Create, edit, and manage tasks available to users."
       >
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenForm()}>
           <PlusCircle className="mr-2 h-4 w-4" />
           Create New Task
+        </Button>
+         <Button variant="destructive-outline" onClick={() => setDeleteAlert({ open: true, task: 'all' })} disabled={!tasks || tasks.length === 0}>
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete All Tasks
         </Button>
       </PageHeader>
       <Card>
@@ -291,12 +352,13 @@ export default function AdminTasksPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleOpenDialog(task)}>
+                          <DropdownMenuItem onClick={() => handleOpenForm(task)}>
                             Edit Task
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => handleDelete(task.id)}
+                            onSelect={(e) => e.preventDefault()}
+                            onClick={() => setDeleteAlert({ open: true, task: task })}
                           >
                             Delete Task
                           </DropdownMenuItem>
@@ -321,7 +383,7 @@ export default function AdminTasksPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>
@@ -403,6 +465,25 @@ export default function AdminTasksPage() {
           </Form>
         </DialogContent>
       </Dialog>
+      
+       <AlertDialog open={deleteAlert.open} onOpenChange={(open) => setDeleteAlert({ open, task: null })}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {deleteAlert.task === 'all'
+                            ? "This action cannot be undone. This will permanently delete all tasks from the database."
+                            : `This will permanently delete the task: "${(deleteAlert.task as Task)?.name}".`}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDelete} className={cn(buttonVariants({ variant: "destructive" }))}>
+                        Delete
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
     </>
   );
 }
