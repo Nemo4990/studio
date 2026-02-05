@@ -15,13 +15,14 @@ import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp, runTransaction, Timestamp, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task, TaskSubmission } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { PurchaseTrialsDialog } from '@/components/dashboard/purchase-trials-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
+import { personalizeTasks } from '@/ai/flows/personalize-tasks-flow';
 
 const GAME_TASK_IDS = ['11', '12', '13'];
 
@@ -40,6 +41,8 @@ export default function TasksPage() {
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
+  const [personalizedTaskOrder, setPersonalizedTaskOrder] = useState<string[] | null>(null); // AI task order
+  const [isPersonalizing, setIsPersonalizing] = useState(true); // Loading state for AI
 
   // Fetch all tasks
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
@@ -54,6 +57,26 @@ export default function TasksPage() {
 
   const isLoading = userLoading || tasksLoading || submissionsLoading;
 
+  // Effect to call the personalization AI flow
+  useEffect(() => {
+    if (!isLoading && user && tasks) {
+      setIsPersonalizing(true);
+      personalizeTasks({ user, tasks })
+        .then(result => {
+          setPersonalizedTaskOrder(result.taskIds);
+        })
+        .catch(error => {
+          console.error("Failed to personalize tasks:", error);
+          // On error, we can just use the default order.
+          setPersonalizedTaskOrder(null); 
+        })
+        .finally(() => {
+          setIsPersonalizing(false);
+        });
+    }
+  }, [isLoading, user, tasks]);
+
+
   const processedTasks = useMemo((): ProcessedTask[] => {
     if (isLoading || !tasks || !user) return [];
 
@@ -63,7 +86,7 @@ export default function TasksPage() {
         .map(s => s.taskId) ?? []
     );
 
-    return tasks
+    const baseProcessedTasks = tasks
       .map(task => {
         const isCompleted = submittedTaskIds.has(task.id);
         const isLocked = user.level < task.requiredLevel;
@@ -83,9 +106,27 @@ export default function TasksPage() {
         }
 
         return { ...task, status, trialsLeft, isDisabled };
-      })
-      .sort((a, b) => a.requiredLevel - b.requiredLevel);
-  }, [tasks, user, userSubmissions, isLoading]);
+      });
+    
+    // If we have a personalized order, use it to sort.
+    if (personalizedTaskOrder) {
+      const orderMap = new Map(personalizedTaskOrder.map((id, index) => [id, index]));
+      return baseProcessedTasks.sort((a, b) => {
+        const aOrder = orderMap.get(a.id);
+        const bOrder = orderMap.get(b.id);
+        
+        // Handle tasks not in the personalized list (e.g. locked tasks)
+        if (aOrder === undefined) return 1;
+        if (bOrder === undefined) return -1;
+        
+        return aOrder - bOrder;
+      });
+    }
+
+    // Fallback to default sorting
+    return baseProcessedTasks.sort((a, b) => a.requiredLevel - b.requiredLevel);
+
+  }, [tasks, user, userSubmissions, isLoading, personalizedTaskOrder]);
   
   const handleGenericSubmit = (task: Task) => {
     if (!user || !firestore) return;
@@ -168,7 +209,7 @@ export default function TasksPage() {
 
   const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
 
-  if (isLoading) {
+  if (isLoading || isPersonalizing) {
     return (
       <>
         <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
