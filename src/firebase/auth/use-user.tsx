@@ -51,6 +51,7 @@ export function useUser(): UseUserReturn {
             id: docSnap.id,
             ...data,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
+            lastDailyCheckin: data.lastDailyCheckin?.toDate ? data.lastDailyCheckin.toDate() : undefined,
         } as User;
         setProfile(userProfile);
         setProfileError(null);

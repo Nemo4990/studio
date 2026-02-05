@@ -67,7 +67,7 @@ export default function TasksPage() {
           level: user.level,
           walletBalance: user.walletBalance,
           taskAttempts: user.taskAttempts,
-          lastDailyCheckin: user.lastDailyCheckin ? (user.lastDailyCheckin as any).toISOString() : undefined,
+          lastDailyCheckin: user.lastDailyCheckin ? user.lastDailyCheckin.toISOString() : undefined,
         },
         tasks: tasks.map(t => ({
           id: t.id,
@@ -106,8 +106,11 @@ export default function TasksPage() {
       .map(task => {
         const isGameTask = GAME_TASK_IDS.includes(task.id);
         
-        // A game task is repeatable, so it's never "completed" in the same way as a one-off task.
-        const isCompleted = !isGameTask && submittedTaskIds.has(task.id);
+        const hasBeenSubmitted = submittedTaskIds.has(task.id);
+        
+        // Game tasks are repeatable and never "completed", only out of trials.
+        // One-off tasks are completed once successfully submitted.
+        const isCompleted = !isGameTask && hasBeenSubmitted;
         const isLocked = user.level < task.requiredLevel;
         const status = isCompleted ? 'completed' : isLocked ? 'locked' : 'available';
 
@@ -119,7 +122,7 @@ export default function TasksPage() {
         
         let isDisabled = false;
         if (task.id === '1' && user.lastDailyCheckin) {
-            const lastCheckin = (user.lastDailyCheckin as unknown as Timestamp)?.toDate() ?? new Date(0);
+            const lastCheckin = user.lastDailyCheckin;
             const twentyFourHours = 24 * 60 * 60 * 1000;
             isDisabled = new Date().getTime() - lastCheckin.getTime() < twentyFourHours;
         }

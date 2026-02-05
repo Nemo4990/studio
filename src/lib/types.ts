@@ -9,7 +9,7 @@ export type User = {
   level: number;
   walletBalance: number;
   createdAt: Date;
-  lastDailyCheckin?: any;
+  lastDailyCheckin?: Date;
   phoneNumber?: string;
   country?: string;
   state?: string;
