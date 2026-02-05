@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
 import { personalizeTasks, type PersonalizeTasksClientInput } from '@/ai/flows/personalize-tasks-flow';
 
-const GAME_TASK_IDS = ['2', '11', '12', '13'];
+const GAME_TASK_IDS = ['11', '12', '13', '2'];
 
 type ProcessedTask = Task & {
   status: 'completed' | 'locked' | 'available';
@@ -97,7 +97,8 @@ export default function TasksPage() {
       // ensure the loading spinner is turned off.
       setIsPersonalizing(false);
     }
-  }, [isLoading, user, tasks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, tasks]);
 
 
   const processedTasks = useMemo((): ProcessedTask[] => {
