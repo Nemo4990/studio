@@ -48,7 +48,6 @@ export function SignupForm() {
         country: '',
         state: '',
         taskAttempts: {},
-        signalScavengerClickedTiles: [],
       };
       
       const userDocRef = doc(firestore, 'users', user.uid);

@@ -212,7 +212,6 @@ export default function TasksPage() {
               {task.status === 'locked' && <Button className="w-full" disabled>Locked</Button>}
               {task.status === 'available' && (
                 <>
-                  {task.id === 'scavenger-1' && <Button className="w-full" onClick={() => router.push('/dashboard/tasks/signal-scavenger')}>Start Scavenger Hunt</Button>}
                   {task.id === '1' && <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>}
                   {task.id === '2' && <Button className="w-full" onClick={() => setIsQuizOpen(true)}>Take Quiz</Button>}
                   
@@ -228,7 +227,7 @@ export default function TasksPage() {
                   {GAME_TASK_IDS.includes(task.id) && (task.trialsLeft ?? 0) <= 0 && <Button className="w-full" onClick={() => setPurchaseTask(task)}><RefreshCw className="mr-2"/>Purchase More Trials</Button>}
                   
                   {/* Fallback for other generic tasks */}
-                  {!['1','2','scavenger-1', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
+                  {!['1','2', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
                 </>
               )}
             </CardFooter>

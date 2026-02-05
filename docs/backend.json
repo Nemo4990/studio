@@ -51,13 +51,6 @@
           "additionalProperties": {
             "type": "number"
           }
-        },
-        "signalScavengerClickedTiles": {
-          "type": "array",
-          "description": "Array of tile IDs the user has clicked in the Signal Scavenger task.",
-          "items": {
-            "type": "string"
-          }
         }
       },
       "required": [
