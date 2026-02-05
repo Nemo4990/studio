@@ -17,14 +17,14 @@ import { collection, doc, setDoc, serverTimestamp, runTransaction, Timestamp, qu
 import { useToast } from '@/hooks/use-toast';
 import React, { useMemo, useState, useEffect } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
-import type { Task, TaskSubmission } from '@/lib/types';
+import type { Task, TaskSubmission, User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { PurchaseTrialsDialog } from '@/components/dashboard/purchase-trials-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
 import { personalizeTasks, type PersonalizeTasksClientInput } from '@/ai/flows/personalize-tasks-flow';
 
-const GAME_TASK_IDS = ['11', '12', '13'];
+const GAME_TASK_IDS = ['2', '11', '12', '13'];
 
 type ProcessedTask = Task & {
   status: 'completed' | 'locked' | 'available';
@@ -212,20 +212,31 @@ export default function TasksPage() {
     }
   };
   
-  const handleStartGame = async (task: Task, path: string) => {
+  const handleStartGameOrQuiz = async (task: Task) => {
     if (!user || !firestore || (task.trialsLeft ?? 0) <= 0) return;
-    
+
     const userRef = doc(firestore, 'users', user.id);
     const newAttempts = { ...user.taskAttempts, [task.id]: (user.taskAttempts?.[task.id] ?? 0) + 1 };
-    
+
     try {
-      await runTransaction(firestore, tx => {
-        tx.update(userRef, { taskAttempts: newAttempts });
-        return Promise.resolve();
-      });
-      router.push(path);
+        await runTransaction(firestore, tx => {
+            tx.update(userRef, { taskAttempts: newAttempts });
+            return Promise.resolve();
+        });
+
+        // Now, either navigate or open dialog
+        if (task.id === '2') {
+            setIsQuizOpen(true);
+        } else if (task.id === '11') {
+            router.push('/dashboard/tasks/speedmath');
+        } else if (task.id === '12') {
+            router.push('/dashboard/tasks/memory-pattern');
+        } else if (task.id === '13') {
+            router.push('/dashboard/tasks/logic-puzzle');
+        }
+
     } catch (error) {
-      toast({ variant: "destructive", title: "Error Starting Game", description: "Could not update your attempts. Please try again." });
+        toast({ variant: "destructive", title: "Error Starting Game", description: "Could not update your attempts. Please try again." });
     }
   };
 
@@ -276,21 +287,23 @@ export default function TasksPage() {
               {task.status === 'available' && (
                 <>
                   {task.id === '1' && <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>}
-                  {task.id === '2' && <Button className="w-full" onClick={() => setIsQuizOpen(true)}>Take Quiz</Button>}
                   
                   {task.id.startsWith('nl-') && <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>}
-                  
-                  {GAME_TASK_IDS.includes(task.id) && (task.trialsLeft ?? 0) > 0 && (
-                    <>
-                      {task.id === '11' && <Button className="w-full" onClick={() => handleStartGame(task, '/dashboard/tasks/speedmath')}>Start Challenge</Button>}
-                      {task.id === '12' && <Button className="w-full" onClick={() => handleStartGame(task, '/dashboard/tasks/memory-pattern')}>Start Challenge</Button>}
-                      {task.id === '13' && <Button className="w-full" onClick={() => handleStartGame(task, '/dashboard/tasks/logic-puzzle')}>Start Challenge</Button>}
-                    </>
+
+                  {GAME_TASK_IDS.includes(task.id) && (
+                    (task.trialsLeft ?? 0) > 0 ? (
+                        <Button className="w-full" onClick={() => handleStartGameOrQuiz(task)}>
+                            {task.id === '2' ? 'Start Quiz' : 'Start Challenge'}
+                        </Button>
+                    ) : (
+                        <Button className="w-full" onClick={() => setPurchaseTask(task)}>
+                            <RefreshCw className="mr-2"/>Purchase More Trials
+                        </Button>
+                    )
                   )}
-                  {GAME_TASK_IDS.includes(task.id) && (task.trialsLeft ?? 0) <= 0 && <Button className="w-full" onClick={() => setPurchaseTask(task)}><RefreshCw className="mr-2"/>Purchase More Trials</Button>}
                   
                   {/* Fallback for other generic tasks */}
-                  {!['1','2', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
+                  {!['1', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
                 </>
               )}
             </CardFooter>

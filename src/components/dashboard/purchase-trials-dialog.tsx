@@ -23,7 +23,7 @@ interface PurchaseTrialsDialogProps {
   user: User;
 }
 
-const PURCHASE_COST = 100; // Cost in coins for 3 more trials
+const PURCHASE_COST = 150; // Cost in coins for 3 more trials
 
 export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTrialsDialogProps) {
   const { toast } = useToast();
