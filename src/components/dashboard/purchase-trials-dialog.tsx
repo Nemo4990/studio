@@ -23,7 +23,7 @@ interface PurchaseTrialsDialogProps {
   user: User;
 }
 
-const PURCHASE_COST = 150; // Cost in coins for 3 more trials
+const PURCHASE_COST = 150; // Cost in coins for 5 more trials
 
 export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTrialsDialogProps) {
   const { toast } = useToast();
@@ -69,7 +69,7 @@ export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTr
 
       toast({
         title: 'Purchase Successful!',
-        description: `You now have 3 more trials for "${task.name}".`,
+        description: `You now have 5 more trials for "${task.name}".`,
       });
       onClose();
 
@@ -95,7 +95,7 @@ export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTr
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <p>Would you like to purchase 3 more trials for this task?</p>
+          <p>Would you like to purchase 5 more trials for this task?</p>
           <div className="mt-4 flex items-center justify-center rounded-lg border bg-secondary p-4">
             <p className="text-lg font-bold">Cost: </p>
             <div className="flex items-center gap-2 ml-2 text-lg font-bold text-primary">

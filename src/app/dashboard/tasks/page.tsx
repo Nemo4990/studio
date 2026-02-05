@@ -117,7 +117,7 @@ export default function TasksPage() {
         let trialsLeft: number | undefined;
         if (isGameTask) {
           const attempts = user.taskAttempts?.[task.id] ?? 0;
-          trialsLeft = 3 - attempts;
+          trialsLeft = 5 - attempts;
         }
         
         let isDisabled = false;
