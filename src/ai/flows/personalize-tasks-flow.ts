@@ -72,10 +72,10 @@ Your goal is to re-order a list of tasks for a user to maximize their engagement
 Consider the following user data:
 - User Level: {{{user.level}}}
 - User Wallet Balance: {{{user.walletBalance}}}
-- User Task Attempts: {{{JSON.stringify user.taskAttempts}}}
+- User Task Attempts: {{{user.taskAttempts}}}
 
 Here is the list of all available tasks:
-{{{JSON.stringify tasks}}}
+{{{tasks}}}
 
 Based on this information, return an ordered list of task IDs. Your ordering should prioritize:
 1.  **Variety**: Don't show the same type of task at the top all the time. Mix it up.
