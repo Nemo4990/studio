@@ -9,6 +9,12 @@ import React from 'react';
 
 export default function PublicHeader() {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const navLinks = [
     { href: '/#features', label: 'Features' },
     { href: '/features', label: 'Market' },
@@ -38,35 +44,37 @@ export default function PublicHeader() {
 
         {/* Mobile Nav */}
         <div className="flex items-center md:hidden">
-          <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle Menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left">
-              <Link
-                href="/"
-                className="mr-6 flex items-center space-x-2 mb-6"
-                onClick={() => setIsOpen(false)}
-              >
-                <LogoWithText />
-              </Link>
-              <nav className="flex flex-col gap-4">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    href={link.href}
-                    onClick={() => setIsOpen(false)}
-                    className="text-lg font-medium"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-            </SheetContent>
-          </Sheet>
+          {isMounted && (
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle Menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left">
+                <Link
+                  href="/"
+                  className="mr-6 flex items-center space-x-2 mb-6"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <LogoWithText />
+                </Link>
+                <nav className="flex flex-col gap-4">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.label}
+                      href={link.href}
+                      onClick={() => setIsOpen(false)}
+                      className="text-lg font-medium"
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          )}
         </div>
 
         <div className="flex flex-1 items-center justify-end space-x-2">
