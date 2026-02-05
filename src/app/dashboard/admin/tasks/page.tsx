@@ -31,6 +31,7 @@ import {
   setDoc,
   deleteDoc,
   updateDoc,
+  getDocs,
 } from 'firebase/firestore';
 import { MoreHorizontal, PlusCircle, Coins } from 'lucide-react';
 import React, { useState } from 'react';
@@ -64,7 +65,6 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useRouter } from 'next/navigation';
 
 const taskSchema = z.object({
   name: z.string().min(3, 'Task name must be at least 3 characters'),
@@ -79,21 +79,15 @@ export default function AdminTasksPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const router = useRouter();
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const tasksQuery = useMemoFirebase(
-    () =>
-      firestore && user?.role === 'admin'
-        ? collection(firestore, 'tasks')
-        : null,
-    [firestore, user]
+    () => (firestore ? collection(firestore, 'tasks') : null),
+    [firestore]
   );
-  const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(
-    tasksQuery
-  );
+  const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -123,13 +117,8 @@ export default function AdminTasksPage() {
   };
 
   const handleDelete = async (taskId: string) => {
-    if (!firestore) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Firestore not available.' });
-      return;
-    }
-    if (!window.confirm('Are you sure you want to delete this task?')) {
-      return;
-    }
+    if (!firestore) return;
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
 
     toast({ title: 'Deleting task...' });
     const taskDocRef = doc(firestore, 'tasks', taskId);
@@ -137,19 +126,18 @@ export default function AdminTasksPage() {
     try {
       await deleteDoc(taskDocRef);
       toast({ title: 'Task deleted successfully' });
-      router.refresh();
     } catch (error: any) {
       console.error('Delete Failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Delete Failed',
-        description: 'You do not have permission to delete tasks. See console for details.',
-      });
       const permissionError = new FirestorePermissionError({
         path: taskDocRef.path,
         operation: 'delete',
       });
       errorEmitter.emit('permission-error', permissionError);
+      toast({
+        variant: 'destructive',
+        title: 'Delete Failed',
+        description: 'You do not have permission to delete tasks.',
+      });
     }
   };
 
@@ -204,9 +192,15 @@ export default function AdminTasksPage() {
   ];
 
   const seedDatabase = async () => {
-    if (!firestore) return;
+    if (!firestore || !tasksQuery) return;
     toast({ title: 'Seeding tasks...' });
     try {
+        const existingTasks = await getDocs(tasksQuery);
+        if (!existingTasks.empty) {
+            toast({ variant: 'destructive', title: 'Seeding Failed', description: 'Tasks collection is not empty.' });
+            return;
+        }
+
         const promises = initialTasksToSeed.map((task) => {
           const docRef = doc(firestore, 'tasks', task.id);
           return setDoc(docRef, task, { merge: true });
@@ -215,43 +209,25 @@ export default function AdminTasksPage() {
         toast({ title: 'Tasks seeded successfully!' });
     } catch(error: any) {
         console.error("Seeding failed:", error);
-        toast({
-            variant: 'destructive',
-            title: 'Seeding Failed',
-            description: 'You do not have permission to create tasks.',
-        });
         const permissionError = new FirestorePermissionError({
             path: 'tasks',
             operation: 'create',
         });
         errorEmitter.emit('permission-error', permissionError);
+        toast({
+            variant: 'destructive',
+            title: 'Seeding Failed',
+            description: 'You do not have permission to create tasks.',
+        });
     }
   };
 
-  if (pageIsLoading) {
-    return (
-        <>
-            <PageHeader title="Manage Tasks" description="Loading..." />
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-4 w-48" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-24 w-full" />
-                </CardContent>
-            </Card>
-        </>
-    );
+  if (userLoading) {
+    return <PageHeader title="Manage Tasks" description="Verifying permissions..." />;
   }
-
+  
   if (user?.role !== 'admin') {
-    return (
-      <PageHeader
-        title="Unauthorized"
-        description="You do not have permission to view this page."
-      />
-    );
+    return <PageHeader title="Unauthorized" description="You do not have permission to view this page." />;
   }
 
   return (
@@ -273,7 +249,9 @@ export default function AdminTasksPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {tasks && tasks.length > 0 ? (
+          {pageIsLoading ? (
+             <Skeleton className="h-24 w-full" />
+          ) : tasks && tasks.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>

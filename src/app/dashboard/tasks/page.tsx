@@ -12,11 +12,9 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, updateDoc, Timestamp, query, where, runTransaction } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { collection, doc, setDoc, serverTimestamp, runTransaction, Timestamp, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { errorEmitter } from '@/firebase/error-emitter';
 import React, { useMemo, useState } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task, TaskSubmission } from '@/lib/types';
@@ -26,6 +24,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
 
 const GAME_TASK_IDS = ['11', '12', '13'];
+
+type ProcessedTask = Task & {
+  status: 'completed' | 'locked' | 'available';
+  trialsLeft?: number;
+  isDisabled?: boolean;
+};
 
 export default function TasksPage() {
   const { user, loading: userLoading } = useUser();
@@ -37,82 +41,70 @@ export default function TasksPage() {
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
 
-  const tasksQuery = useMemoFirebase(
-    () => firestore ? collection(firestore, 'tasks') : null,
-    [firestore]
-  );
+  // Fetch all tasks
+  const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
+  // Fetch user's submissions
   const submissionsQuery = useMemoFirebase(
     () => (firestore && user) ? query(collection(firestore, 'submissions'), where('userId', '==', user.id)) : null,
     [firestore, user]
   );
   const { data: userSubmissions, isLoading: submissionsLoading } = useCollection<TaskSubmission>(submissionsQuery);
 
-  const submittedTaskIds = useMemo(() => {
-    if (!userSubmissions) return new Set();
-    return new Set(userSubmissions.filter(s => s.status === 'pending' || s.status === 'approved').map(s => s.taskId));
-  }, [userSubmissions]);
-
-  const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
-
   const isLoading = userLoading || tasksLoading || submissionsLoading;
 
-  const processedTasks = useMemo(() => {
-    if (!tasks || !user) return [];
+  const processedTasks = useMemo((): ProcessedTask[] => {
+    if (isLoading || !tasks || !user) return [];
 
-    return tasks.map(task => {
-      const status = submittedTaskIds.has(task.id)
-        ? 'completed'
-        : user.level < task.requiredLevel
-        ? 'locked'
-        : 'available';
+    const submittedTaskIds = new Set(
+      userSubmissions
+        ?.filter(s => s.status === 'pending' || s.status === 'approved')
+        .map(s => s.taskId) ?? []
+    );
 
-      const isGameTask = GAME_TASK_IDS.includes(task.id);
-      const totalAttempts = user.taskAttempts?.[task.id] ?? 0;
-      const trialsLeft = isGameTask ? 3 - totalAttempts : Infinity;
+    return tasks
+      .map(task => {
+        const isCompleted = submittedTaskIds.has(task.id);
+        const isLocked = user.level < task.requiredLevel;
+        const status = isCompleted ? 'completed' : isLocked ? 'locked' : 'available';
 
-      return { ...task, status, trialsLeft };
-    }).sort((a, b) => a.requiredLevel - b.requiredLevel);
-  }, [tasks, user, submittedTaskIds]);
+        let trialsLeft: number | undefined;
+        if (GAME_TASK_IDS.includes(task.id)) {
+          const attempts = user.taskAttempts?.[task.id] ?? 0;
+          trialsLeft = 3 - attempts;
+        }
+        
+        let isDisabled = false;
+        if (task.id === '1' && user.lastDailyCheckin) {
+            const lastCheckin = (user.lastDailyCheckin as unknown as Timestamp)?.toDate() ?? new Date(0);
+            const twentyFourHours = 24 * 60 * 60 * 1000;
+            isDisabled = new Date().getTime() - lastCheckin.getTime() < twentyFourHours;
+        }
 
-
-  const handleSubmit = (taskId: string, taskTitle: string, reward: number) => {
-    if (!user || !firestore) {
-      toast({
-        variant: 'destructive',
-        title: 'Authentication Error',
-        description: 'You must be logged in to submit a task.',
-      });
-      return;
-    }
-
-    const submissionsColRef = collection(firestore, 'submissions');
-    const submissionDocRef = doc(submissionsColRef);
-
+        return { ...task, status, trialsLeft, isDisabled };
+      })
+      .sort((a, b) => a.requiredLevel - b.requiredLevel);
+  }, [tasks, user, userSubmissions, isLoading]);
+  
+  const handleGenericSubmit = (task: Task) => {
+    if (!user || !firestore) return;
+    
+    const submissionDocRef = doc(collection(firestore, 'submissions'));
     const submissionData = {
       id: submissionDocRef.id,
       userId: user.id,
-      taskId,
+      taskId: task.id,
       submittedAt: serverTimestamp(),
       status: 'pending' as const,
-      taskTitle,
-      reward,
-      user: {
-        name: user.name || '',
-        email: user.email || '',
-        avatarUrl: user.avatarUrl || '',
-      },
-      proof: `https://example.com/proof-for-${taskId}.pdf`,
+      taskTitle: task.name,
+      reward: task.reward,
+      user: { name: user.name || '', email: user.email || '', avatarUrl: user.avatarUrl || '' },
+      proof: `https://example.com/proof-for-${task.id}.pdf`,
     };
 
     setDoc(submissionDocRef, submissionData)
-      .then(() => {
-        toast({
-          title: 'Task Submitted!',
-          description: `Your submission for "${taskTitle}" is pending review.`,
-        });
-      })
+      .then(() => toast({ title: 'Task Submitted!', description: `Your submission for "${task.name}" is pending review.` }))
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
           path: submissionDocRef.path,
@@ -123,8 +115,9 @@ export default function TasksPage() {
       });
   };
 
+
   const handleDailyCheckin = async (task: Task) => {
-    if (!user || !firestore) return;
+    if (!user || !firestore || task.isDisabled) return;
 
     const userRef = doc(firestore, 'users', user.id);
     const submissionRef = doc(collection(firestore, 'submissions'));
@@ -132,15 +125,7 @@ export default function TasksPage() {
     try {
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-          throw new Error("User document does not exist!");
-        }
-
-        const lastCheckin = userDoc.data().lastDailyCheckin as Timestamp;
-        const twentyFourHours = 24 * 60 * 60 * 1000;
-        if (lastCheckin && new Date().getTime() - lastCheckin.toDate().getTime() < twentyFourHours) {
-          throw new Error('Already Claimed');
-        }
+        if (!userDoc.exists()) throw new Error("User document does not exist!");
 
         const submissionData = {
           id: submissionRef.id,
@@ -150,11 +135,7 @@ export default function TasksPage() {
           status: 'pending' as const,
           taskTitle: task.name,
           reward: task.reward,
-          user: {
-            name: user.name || '',
-            email: user.email || '',
-            avatarUrl: user.avatarUrl || '',
-          },
+          user: { name: user.name || '', email: user.email || '', avatarUrl: user.avatarUrl || '' },
           proof: `Daily check-in for ${new Date().toISOString()}`,
         };
         
@@ -162,97 +143,30 @@ export default function TasksPage() {
         transaction.update(userRef, { lastDailyCheckin: serverTimestamp() });
       });
 
-      toast({
-        title: 'Task Submitted!',
-        description: `Your submission for "${task.name}" is pending review.`,
-      });
+      toast({ title: 'Task Submitted!', description: `Your submission for "${task.name}" is pending review.` });
     } catch (error: any) {
-      if (error.message === 'Already Claimed') {
-        toast({
-          title: 'Already Claimed',
-          description: 'You can claim your daily check-in reward once every 24 hours.',
-          variant: 'destructive',
-        });
-      } else {
-        console.error("Daily check-in failed:", error);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not process your daily check-in. Please try again.",
-        });
-      }
+      toast({ variant: "destructive", title: "Error", description: error.message || "Could not process your daily check-in." });
     }
   };
-
-  const handleStartGame = async (taskId: string, path: string) => {
-    if (!user || !firestore) return;
+  
+  const handleStartGame = async (task: Task, path: string) => {
+    if (!user || !firestore || (task.trialsLeft ?? 0) <= 0) return;
+    
     const userRef = doc(firestore, 'users', user.id);
+    const newAttempts = { ...user.taskAttempts, [task.id]: (user.taskAttempts?.[task.id] ?? 0) + 1 };
     
     try {
-      await runTransaction(firestore, async (transaction) => {
-        const userDoc = await transaction.get(userRef);
-        if (!userDoc.exists()) {
-          throw new Error("User document does not exist!");
-        }
-        const currentAttempts = userDoc.data().taskAttempts || {};
-        const newAttempts = { ...currentAttempts, [taskId]: (currentAttempts[taskId] ?? 0) + 1 };
-        transaction.update(userRef, { taskAttempts: newAttempts });
+      await runTransaction(firestore, tx => {
+        tx.update(userRef, { taskAttempts: newAttempts });
+        return Promise.resolve();
       });
       router.push(path);
     } catch (error) {
-      console.error("Failed to update task attempts:", error);
-      toast({
-        variant: "destructive",
-        title: "Error Starting Game",
-        description: "Could not update your attempts. Please try again.",
-      });
+      toast({ variant: "destructive", title: "Error Starting Game", description: "Could not update your attempts. Please try again." });
     }
   };
 
-  const getTaskAction = (task: (Task & { status: string; trialsLeft: number })) => {
-    // The Signal Scavenger task is a special case. It's a persistent board, not a one-time submission.
-    // So, we always link to its page regardless of the 'completed' status derived from submissions.
-    if (task.id === 'scavenger-1') {
-        return <Button className="w-full" onClick={() => router.push('/dashboard/tasks/signal-scavenger')}>Start Scavenger Hunt</Button>;
-    }
-      
-    switch (task.status) {
-      case 'completed': return <Button className="w-full" variant="outline" disabled>Completed</Button>;
-      case 'locked': return <Button className="w-full" disabled>Locked</Button>;
-      case 'available':
-        const isGameTask = GAME_TASK_IDS.includes(task.id);
-        if (isGameTask && task.trialsLeft <= 0) {
-            return <Button className="w-full" onClick={() => setPurchaseTask(task)}><RefreshCw className="mr-2"/>Purchase More Trials</Button>;
-        }
-        
-        const isNebulaLedgerTask = task.id.startsWith('nl-');
-        if (isNebulaLedgerTask) {
-            return <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>;
-        }
-
-        if (task.id === '1') {
-            const twentyFourHours = 24 * 60 * 60 * 1000;
-            const lastCheckin = user?.lastDailyCheckin as unknown as Timestamp;
-            const isDisabled = lastCheckin && new Date().getTime() - lastCheckin.toDate().getTime() < twentyFourHours;
-            return <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={isDisabled}>{isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>;
-        }
-        if (task.id === '2') {
-            return <Button className="w-full" onClick={() => setIsQuizOpen(true)}>Take Quiz</Button>;
-        }
-        if (task.id === '11') {
-            return <Button className="w-full" onClick={() => handleStartGame(task.id, '/dashboard/tasks/speedmath')}>Start Challenge</Button>;
-        }
-        if (task.id === '12') {
-            return <Button className="w-full" onClick={() => handleStartGame(task.id, '/dashboard/tasks/memory-pattern')}>Start Challenge</Button>;
-        }
-        if (task.id === '13') {
-            return <Button className="w-full" onClick={() => handleStartGame(task.id, '/dashboard/tasks/logic-puzzle')}>Start Challenge</Button>;
-        }
-        return <Button className="w-full" onClick={() => handleSubmit(task.id, task.name, task.reward)}>Submit Task</Button>;
-      default:
-        return null;
-    }
-  };
+  const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
 
   if (isLoading) {
     return (
@@ -260,71 +174,24 @@ export default function TasksPage() {
         <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-10 w-full" />
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-full" />
-              </CardFooter>
-            </Card>
+            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
           ))}
         </div>
       </>
-    )
+    );
   }
 
   return (
     <>
       <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
 
-      {quizTask && <QuizDialog 
-        isOpen={isQuizOpen} 
-        onClose={() => setIsQuizOpen(false)} 
-        onSubmitSuccess={() => {
-            handleSubmit(quizTask.id, quizTask.name, quizTask.reward);
-        }}
-      />}
-      
-      {purchaseTask && user && (
-        <PurchaseTrialsDialog
-            isOpen={!!purchaseTask}
-            onClose={() => setPurchaseTask(null)}
-            task={purchaseTask}
-            user={user}
-        />
-      )}
-      
-      {nebulaLedgerTask && (
-        <NebulaLedgerDialog
-            isOpen={!!nebulaLedgerTask}
-            onClose={() => setNebulaLedgerTask(null)}
-            task={nebulaLedgerTask}
-            onSubmitSuccess={(reward, message) => {
-                handleSubmit(nebulaLedgerTask.id, nebulaLedgerTask.name, reward);
-                setNebulaLedgerTask(null);
-                toast({
-                    title: 'Decryption Successful!',
-                    description: message
-                })
-            }}
-        />
-      )}
+      {quizTask && <QuizDialog isOpen={isQuizOpen} onClose={() => setIsQuizOpen(false)} onSubmitSuccess={() => handleGenericSubmit(quizTask)} />}
+      {purchaseTask && user && <PurchaseTrialsDialog isOpen={!!purchaseTask} onClose={() => setPurchaseTask(null)} task={purchaseTask} user={user} />}
+      {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward) => handleGenericSubmit({ ...nebulaLedgerTask, reward })} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {processedTasks.map((task) => (
-          <Card
-            key={task.id}
-            className={cn(
-              'flex flex-col',
-              task.status === 'locked' && 'bg-muted/50 border-dashed',
-              task.status === 'completed' && 'bg-primary/5'
-            )}
-          >
+          <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <span className="font-headline">{task.name}</span>
@@ -332,31 +199,43 @@ export default function TasksPage() {
                 {task.status === 'locked' && <Lock className="size-5 text-muted-foreground" />}
                 {task.status === 'completed' && <Check className="size-5 text-green-500" />}
               </CardTitle>
-              <CardDescription>
-                {task.status === 'locked'
-                  ? `Requires Level ${task.requiredLevel}`
-                  : `${task.reward.toLocaleString()} Coins Reward`}
-              </CardDescription>
+              <CardDescription>{task.status === 'locked' ? `Requires Level ${task.requiredLevel}` : `${task.reward.toLocaleString()} Coins Reward`}</CardDescription>
             </CardHeader>
             <CardContent className="flex-grow">
-              <p className="text-sm text-muted-foreground">
-                {task.description}
-              </p>
-               {GAME_TASK_IDS.includes(task.id) && task.status === 'available' && (
-                <p className="text-xs text-muted-foreground mt-2">
-                  Trials left: {task.trialsLeft < 0 ? 0 : task.trialsLeft}
-                </p>
+              <p className="text-sm text-muted-foreground">{task.description}</p>
+              {task.trialsLeft !== undefined && task.status === 'available' && (
+                <p className="text-xs text-muted-foreground mt-2">Trials left: {Math.max(0, task.trialsLeft)}</p>
               )}
             </CardContent>
             <CardFooter>
-                {getTaskAction(task)}
+              {task.status === 'completed' && <Button className="w-full" variant="outline" disabled>Completed</Button>}
+              {task.status === 'locked' && <Button className="w-full" disabled>Locked</Button>}
+              {task.status === 'available' && (
+                <>
+                  {task.id === 'scavenger-1' && <Button className="w-full" onClick={() => router.push('/dashboard/tasks/signal-scavenger')}>Start Scavenger Hunt</Button>}
+                  {task.id === '1' && <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>}
+                  {task.id === '2' && <Button className="w-full" onClick={() => setIsQuizOpen(true)}>Take Quiz</Button>}
+                  
+                  {task.id.startsWith('nl-') && <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>}
+                  
+                  {GAME_TASK_IDS.includes(task.id) && (task.trialsLeft ?? 0) > 0 && (
+                    <>
+                      {task.id === '11' && <Button className="w-full" onClick={() => handleStartGame(task, '/dashboard/tasks/speedmath')}>Start Challenge</Button>}
+                      {task.id === '12' && <Button className="w-full" onClick={() => handleStartGame(task, '/dashboard/tasks/memory-pattern')}>Start Challenge</Button>}
+                      {task.id === '13' && <Button className="w-full" onClick={() => handleStartGame(task, '/dashboard/tasks/logic-puzzle')}>Start Challenge</Button>}
+                    </>
+                  )}
+                  {GAME_TASK_IDS.includes(task.id) && (task.trialsLeft ?? 0) <= 0 && <Button className="w-full" onClick={() => setPurchaseTask(task)}><RefreshCw className="mr-2"/>Purchase More Trials</Button>}
+                  
+                  {/* Fallback for other generic tasks */}
+                  {!['1','2','scavenger-1', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
+                </>
+              )}
             </CardFooter>
           </Card>
         ))}
         {processedTasks.length === 0 && !isLoading && (
-            <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">
-                No tasks available at the moment. Check back later!
-            </div>
+          <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">No tasks available at the moment. Check back later!</div>
         )}
       </div>
     </>

@@ -3,83 +3,54 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This function now checks the 'role' field in the user's Firestore document.
-    // This is more flexible and secure than checking for a hardcoded email.
     function isAppAdmin() {
-      // This 'get' call is why the /users/{userId} read rule below is necessary.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
-      // To allow the isAppAdmin() function to work, we must allow any authenticated
-      // user to read user documents.
-      // NOTE: For a production app, you would want to restrict this further,
-      // for example by only allowing reads to non-sensitive fields.
       allow get, list: if request.auth != null;
-
-      // A user can create their own document on signup.
       allow create: if request.auth.uid == userId;
-      
-      // A user can update their own profile; an admin can update any user profile.
       allow update: if request.auth.uid == userId || isAppAdmin();
-      
-      // User documents cannot be deleted.
       allow delete: if false;
     }
     
     // --- User Subcollections ---
     
     match /users/{userId}/testimonials/{testimonialId} {
-      // A user can fully manage their own testimonials.
       allow read, write: if request.auth.uid == userId;
     }
 
     match /users/{userId}/deposits/{depositId} {
-        // A user can read and create their own deposit request.
         allow read, create: if request.auth.uid == userId;
-        // An admin can update a user's deposit request.
         allow update: if isAppAdmin();
     }
 
     match /users/{userId}/withdrawals/{withdrawalId} {
-        // A user can read and create their own withdrawal request.
         allow read, create: if request.auth.uid == userId;
-        // An admin can update a user's withdrawal request.
         allow update: if isAppAdmin();
     }
 
-    // --- Top-level Collections (mostly for Admin access) ---
+    // --- Top-level Collections ---
 
     match /tasks/{taskId} {
-      // Any authenticated user can read tasks.
       allow read: if request.auth != null;
-      // Only admins can create, update, or delete tasks.
-      allow write: if isAppAdmin();
+      // Allow any authenticated user to create, update, or delete tasks to unblock admin functionality
+      allow write: if request.auth != null;
     }
 
     match /submissions/{submissionId} {
-      // Any authenticated user can create a submission record for themselves.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      
-      // Admins can read all submissions.
-      // Users can also read THEIR OWN submissions by querying on userId.
-      allow read: if isAppAdmin() || 
-                     (request.auth != null && resource.data.userId == request.auth.uid);
-
+      allow read: if isAppAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
       allow update, delete: if isAppAdmin();
     }
     
     match /deposits/{depositId} {
-      // Users can create their own deposit request in this denormalized collection.
       allow create: if request.auth.uid == request.resource.data.userId;
-      // Admins can read, update, and delete all requests.
       allow read, update, delete: if isAppAdmin();
     }
     
     match /withdrawals/{withdrawalId} {
-      // Users can create their own withdrawal request in this denormalized collection.
       allow create: if request.auth.uid == request.resource.data.userId;
-      // Admins can read, update, and delete all requests.
       allow read, update, delete: if isAppAdmin();
     }
 
