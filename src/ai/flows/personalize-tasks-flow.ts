@@ -28,13 +28,13 @@ const UserSchema = z.object({
   lastDailyCheckin: z.string().optional(),
 });
 
-export const PersonalizeTasksInputSchema = z.object({
+const PersonalizeTasksInputSchema = z.object({
   user: UserSchema,
   tasks: z.array(TaskSchema),
 });
 export type PersonalizeTasksInput = z.infer<typeof PersonalizeTasksInputSchema>;
 
-export const PersonalizeTasksOutputSchema = z.object({
+const PersonalizeTasksOutputSchema = z.object({
   taskIds: z.array(z.string()).describe('An ordered array of task IDs, from most to least recommended.'),
 });
 export type PersonalizeTasksOutput = z.infer<typeof PersonalizeTasksOutputSchema>;
