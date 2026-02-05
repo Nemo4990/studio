@@ -7,6 +7,7 @@ import { useUser } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import PageHeader from '@/components/dashboard/page-header';
 
 export default function DashboardLayout({
   children,
@@ -22,34 +23,10 @@ export default function DashboardLayout({
     }
   }, [user, loading, router]);
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen">
-        <div className="hidden md:flex flex-col w-64 border-r">
-            <div className="p-4 border-b">
-                <Skeleton className="h-8 w-32" />
-            </div>
-            <div className="p-4 space-y-4">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-            </div>
-        </div>
-        <div className="flex-1 p-8">
-            <Skeleton className="h-12 w-64 mb-8" />
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-                <Skeleton className="h-32 w-full" />
-            </div>
-        </div>
-      </div>
-    );
-  }
-
   if (error) {
-    return <div>Error loading user data. Please try again later.</div>
+    // For now, a simple redirect is fine
+    router.push('/login');
+    return null; // or a loading spinner while redirecting
   }
 
   return (
@@ -58,7 +35,22 @@ export default function DashboardLayout({
       <SidebarInset>
         <div className="flex flex-col">
           <AppHeader user={user} />
-          <main className="flex-1 p-4 sm:px-6 sm:py-0">{children}</main>
+          <main className="flex-1 p-4 sm:px-6 sm:py-0">
+            {loading || !user ? (
+              // This is the key change: render skeleton *inside* the layout
+              <div>
+                 <PageHeader title="Loading Dashboard..." description="Please wait while we fetch your data." />
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <Skeleton className="h-32"/>
+                    <Skeleton className="h-32"/>
+                    <Skeleton className="h-32"/>
+                    <Skeleton className="h-32"/>
+                </div>
+              </div>
+            ) : (
+              children
+            )}
+          </main>
         </div>
       </SidebarInset>
     </SidebarProvider>

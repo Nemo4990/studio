@@ -7,6 +7,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
+  SidebarMenuSkeleton,
 } from '@/components/ui/sidebar';
 import { LogoWithText } from '../logo';
 import { adminNavItems, bottomNavItems, userNavItems } from '@/lib/config';
@@ -18,9 +19,10 @@ import { Badge } from '../ui/badge';
 import { getAuth, signOut } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { LogOut } from 'lucide-react';
+import { Skeleton } from '../ui/skeleton';
 
 type AppSidebarProps = {
-  user: User;
+  user: User | null;
 };
 
 export default function AppSidebar({ user }: AppSidebarProps) {
@@ -28,6 +30,39 @@ export default function AppSidebar({ user }: AppSidebarProps) {
   const router = useRouter();
   const { toast } = useToast();
   const auth = getAuth();
+
+  if (!user) {
+    return (
+        <Sidebar>
+            <SidebarHeader>
+                <LogoWithText />
+            </SidebarHeader>
+            <SidebarContent>
+                <SidebarMenu>
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuSkeleton showIcon />
+                </SidebarMenu>
+            </SidebarContent>
+            <SidebarFooter>
+                <SidebarMenu>
+                    <SidebarMenuSkeleton showIcon />
+                    <SidebarMenuItem>
+                        <div className="flex items-center gap-2 p-2">
+                            <Skeleton className="h-8 w-8 rounded-full" />
+                            <div className="flex flex-col gap-1">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-32" />
+                            </div>
+                        </div>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarFooter>
+        </Sidebar>
+    );
+  }
+
+
   const navItems = user.role === 'admin' ? adminNavItems : userNavItems;
 
   const handleLogout = async () => {
