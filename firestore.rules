@@ -5,16 +5,35 @@ service cloud.firestore {
 
     function isAppAdmin() {
       // Check if the user is authenticated and if their user document has the 'admin' role.
+      // This function now correctly allows reading the user's own profile to check the role.
       return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     match /users/{userId} {
-      // Any authenticated user can read user profiles (needed for isAppAdmin).
-      allow get, list: if request.auth != null;
-      // A user can create their own profile.
+      // An admin can read any user profile.
+      // A user can only read their own profile.
+      allow get: if isAppAdmin() || request.auth.uid == userId;
+      // Any authenticated user can list users (needed for some UI elements, but consider restricting).
+      allow list: if request.auth != null;
+      // A user can create their own profile upon signup.
       allow create: if request.auth.uid == userId;
-      // A user can update their own profile, or an admin can update any profile.
-      allow update: if request.auth.uid == userId || isAppAdmin();
+
+      // A user can update their own profile (e.g., name, phone number).
+      // An admin can update any profile without restriction.
+      // CRITICAL: This rule prevents a user from directly changing their own `level`,
+      // `walletBalance`, or `role`, as per the architectural design.
+      // These fields must only be changed via server-side logic (transactions).
+      allow update: if (request.auth.uid == userId && !(
+                        'walletBalance' in request.resource.data &&
+                        request.resource.data.walletBalance != resource.data.walletBalance
+                      ) && !(
+                        'level' in request.resource.data &&
+                        request.resource.data.level != resource.data.level
+                      ) && !(
+                        'role' in request.resource.data &&
+                        request.resource.data.role != resource.data.role
+                      )) || isAppAdmin();
+
       // Deleting users is not allowed from the client.
       allow delete: if false;
     }
