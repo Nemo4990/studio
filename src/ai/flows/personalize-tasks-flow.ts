@@ -9,7 +9,6 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import type { Task, User } from '@/lib/types';
 
 // We can't import the full User Zod schema from backend.json easily.
 // For the AI prompt, we only need a subset of the user and task data.
@@ -39,25 +38,28 @@ const PersonalizeTasksOutputSchema = z.object({
 });
 export type PersonalizeTasksOutput = z.infer<typeof PersonalizeTasksOutputSchema>;
 
+// This defines the shape of the plain object passed from the client.
+// It avoids passing non-serializable objects like Timestamps.
+export type PersonalizeTasksClientInput = {
+  user: {
+    level: number;
+    walletBalance: number;
+    taskAttempts?: { [taskId: string]: number };
+    lastDailyCheckin?: string;
+  };
+  tasks: {
+    id: string;
+    name: string;
+    reward: number;
+    requiredLevel: number;
+  }[];
+};
+
+
 // This is the function the client-side code will call.
-export async function personalizeTasks(input: { user: User, tasks: Task[] }): Promise<PersonalizeTasksOutput> {
-    // We need to map the full User/Task types to the simpler schema types for the flow.
-    const flowInput: PersonalizeTasksInput = {
-        user: {
-            level: input.user.level,
-            walletBalance: input.user.walletBalance,
-            taskAttempts: input.user.taskAttempts,
-            // Convert Date to string if necessary, or omit if not needed for prompt
-            lastDailyCheckin: input.user.lastDailyCheckin?.toString(), 
-        },
-        tasks: input.tasks.map(t => ({
-            id: t.id,
-            name: t.name,
-            reward: t.reward,
-            requiredLevel: t.requiredLevel,
-        })),
-    };
-    return personalizeTasksFlow(flowInput);
+export async function personalizeTasks(input: PersonalizeTasksClientInput): Promise<PersonalizeTasksOutput> {
+    // The input from the client is already in the shape the AI flow needs.
+    return personalizeTasksFlow(input);
 }
 
 const personalizeTasksPrompt = ai.definePrompt({

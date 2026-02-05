@@ -22,7 +22,7 @@ import { useRouter } from 'next/navigation';
 import { PurchaseTrialsDialog } from '@/components/dashboard/purchase-trials-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
-import { personalizeTasks } from '@/ai/flows/personalize-tasks-flow';
+import { personalizeTasks, type PersonalizeTasksClientInput } from '@/ai/flows/personalize-tasks-flow';
 
 const GAME_TASK_IDS = ['11', '12', '13'];
 
@@ -61,7 +61,23 @@ export default function TasksPage() {
   useEffect(() => {
     if (!isLoading && user && tasks) {
       setIsPersonalizing(true);
-      personalizeTasks({ user, tasks })
+      
+      const aiInput: PersonalizeTasksClientInput = {
+        user: {
+          level: user.level,
+          walletBalance: user.walletBalance,
+          taskAttempts: user.taskAttempts,
+          lastDailyCheckin: user.lastDailyCheckin ? (user.lastDailyCheckin as any).toDate().toISOString() : undefined,
+        },
+        tasks: tasks.map(t => ({
+          id: t.id,
+          name: t.name,
+          reward: t.reward,
+          requiredLevel: t.requiredLevel,
+        })),
+      };
+
+      personalizeTasks(aiInput)
         .then(result => {
           setPersonalizedTaskOrder(result.taskIds);
         })
