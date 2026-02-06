@@ -77,12 +77,9 @@ export function useCollection<T = any>(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
         const results: ResultItemType[] = snapshot.docs.map((doc) => {
-          // The spread operator `...doc.data()` can be unsafe. It might carry over
-          // internal Firestore types that interfere with React's state management,
-          // causing UI freezes, especially with large data like image URIs.
-          // This creates a clean, plain JavaScript object.
-          const plainData = JSON.parse(JSON.stringify(doc.data()));
-          return { id: doc.id, ...plainData };
+          // The spread operator is performant. Firestore Timestamps will be passed through
+          // and must be handled by the consuming component (e.g., using .toDate()).
+          return { id: doc.id, ...doc.data() } as ResultItemType;
         });
         setData(results);
         setError(null);
