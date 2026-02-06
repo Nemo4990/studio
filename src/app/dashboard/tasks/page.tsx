@@ -15,14 +15,13 @@ import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { collection, doc, serverTimestamp, runTransaction, Timestamp, query, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task, TaskSubmission, User } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { PurchaseTrialsDialog } from '@/components/dashboard/purchase-trials-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { NebulaLedgerDialog } from '@/components/dashboard/nebula-ledger-dialog';
-import { personalizeTasks, type PersonalizeTasksClientInput } from '@/ai/flows/personalize-tasks-flow';
 
 const GAME_TASK_IDS = ['11', '12', '13', '2'];
 
@@ -41,9 +40,6 @@ export default function TasksPage() {
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
-  const [personalizedTaskOrder, setPersonalizedTaskOrder] = useState<string[] | null>(null); // AI task order
-  const [isPersonalizing, setIsPersonalizing] = useState(true); // Loading state for AI
-  const personalizationRan = useRef(false); // Flag to ensure AI call only runs once.
 
   // Fetch all tasks
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
@@ -57,49 +53,6 @@ export default function TasksPage() {
   const { data: userSubmissions, isLoading: submissionsLoading } = useCollection<TaskSubmission>(submissionsQuery);
 
   const isLoading = userLoading || tasksLoading || submissionsLoading;
-
-  // Effect to call the personalization AI flow
-  useEffect(() => {
-    // Only run this effect if data is loaded AND the AI call hasn't run yet.
-    if (!isLoading && user && tasks && !personalizationRan.current) {
-      personalizationRan.current = true; // Set the flag so it doesn't run again
-      setIsPersonalizing(true);
-      
-      const aiInput: PersonalizeTasksClientInput = {
-        user: {
-          level: user.level,
-          walletBalance: user.walletBalance,
-          taskAttempts: user.taskAttempts,
-          lastDailyCheckin: user.lastDailyCheckin ? user.lastDailyCheckin.toISOString() : undefined,
-        },
-        tasks: tasks.map(t => ({
-          id: t.id,
-          name: t.name,
-          reward: t.reward,
-          requiredLevel: t.requiredLevel,
-        })),
-      };
-
-      personalizeTasks(aiInput)
-        .then(result => {
-          setPersonalizedTaskOrder(result.taskIds);
-        })
-        .catch(error => {
-          console.error("Failed to personalize tasks:", error);
-          // On error, we can just use the default order.
-          setPersonalizedTaskOrder(null); 
-        })
-        .finally(() => {
-          setIsPersonalizing(false);
-        });
-    } else if (!isLoading) {
-      // If we're done loading but the effect didn't run (e.g. because it already ran),
-      // ensure the loading spinner is turned off.
-      setIsPersonalizing(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading, tasks]);
-
 
   const processedTasks = useMemo((): ProcessedTask[] => {
     if (isLoading || !tasks || !user) return [];
@@ -138,25 +91,10 @@ export default function TasksPage() {
         return { ...task, status, trialsLeft, isDisabled };
       });
     
-    // If we have a personalized order, use it to sort.
-    if (personalizedTaskOrder) {
-      const orderMap = new Map(personalizedTaskOrder.map((id, index) => [id, index]));
-      return baseProcessedTasks.sort((a, b) => {
-        const aOrder = orderMap.get(a.id);
-        const bOrder = orderMap.get(b.id);
-        
-        // Handle tasks not in the personalized list (e.g. locked tasks)
-        if (aOrder === undefined) return 1;
-        if (bOrder === undefined) return -1;
-        
-        return aOrder - bOrder;
-      });
-    }
-
     // Fallback to default sorting
     return baseProcessedTasks.sort((a, b) => a.requiredLevel - b.requiredLevel);
 
-  }, [tasks, user, userSubmissions, isLoading, personalizedTaskOrder]);
+  }, [tasks, user, userSubmissions, isLoading]);
   
   const handleGenericSubmit = (task: Task, proof?: string) => {
     if (!user || !firestore) return;
@@ -268,7 +206,7 @@ export default function TasksPage() {
       {purchaseTask && user && <PurchaseTrialsDialog isOpen={!!purchaseTask} onClose={() => setPurchaseTask(null)} task={purchaseTask} user={user} />}
       {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward, message) => handleGenericSubmit({ ...nebulaLedgerTask, reward }, message)} />}
 
-      {isLoading || isPersonalizing ? (
+      {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
