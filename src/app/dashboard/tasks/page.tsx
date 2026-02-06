@@ -232,19 +232,6 @@ export default function TasksPage() {
 
   const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
 
-  if (isLoading) {
-    return (
-      <>
-        <PageHeader title="Tasks" description="Loading tasks..." />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
-          ))}
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <PageHeader title="Tasks" description={pageDescription} />
@@ -254,7 +241,11 @@ export default function TasksPage() {
       {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward, message) => handleGenericSubmit({ ...nebulaLedgerTask, reward }, message)} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {orderedTasks.length > 0 ? (
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
+          ))
+        ) : orderedTasks.length > 0 ? (
           orderedTasks.map((task) => (
             <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
               <CardHeader>
