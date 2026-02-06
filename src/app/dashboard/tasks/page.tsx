@@ -12,11 +12,10 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles, RefreshCw, HelpCircle } from 'lucide-react';
-import * as icons from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { collection, doc, serverTimestamp, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task, TaskSubmission } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -32,13 +31,6 @@ type ProcessedTask = Task & {
   isDisabled?: boolean;
 };
 
-const DynamicIcon = ({ name, ...props }: { name: string, [key: string]: any }) => {
-    const LucideIcon = icons[name as keyof typeof icons] as React.FC<any>;
-    if (!LucideIcon) return <HelpCircle {...props} />; // Fallback icon
-    return <LucideIcon {...props} />;
-};
-
-
 export default function TasksPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
@@ -49,6 +41,7 @@ export default function TasksPage() {
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
   const [orderedTasks, setOrderedTasks] = useState<ProcessedTask[]>([]);
+  const personalizationRan = useRef(false);
 
   // Fetch all tasks
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
@@ -237,6 +230,19 @@ export default function TasksPage() {
 
   const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
 
+  if (isLoading) {
+    return (
+      <>
+        <PageHeader title="Tasks" description="Loading tasks..." />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
+          ))}
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <PageHeader title="Tasks" description={pageDescription} />
@@ -246,17 +252,17 @@ export default function TasksPage() {
       {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward, message) => handleGenericSubmit({ ...nebulaLedgerTask, reward }, message)} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {isLoading ? (
-          Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
-          ))
-        ) : orderedTasks.length > 0 ? (
+        {orderedTasks.length > 0 ? (
           orderedTasks.map((task) => (
             <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <div className='flex items-center gap-3'>
-                    <DynamicIcon name={task.icon} className="size-6 text-primary" />
+                    {task.icon ? (
+                      <img src={task.icon} alt={task.name} className="size-6 object-cover rounded-sm" />
+                    ) : (
+                      <HelpCircle className="size-6 text-primary" />
+                    )}
                     <span className="font-headline">{task.name}</span>
                   </div>
                   {task.status === 'available' && <Sparkles className="size-5 text-accent" />}

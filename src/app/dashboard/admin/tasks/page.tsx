@@ -35,7 +35,6 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { MoreHorizontal, PlusCircle, Coins, Trash2, HelpCircle } from 'lucide-react';
-import * as icons from 'lucide-react';
 import React, { useState } from 'react';
 import type { Task } from '@/lib/types';
 import {
@@ -78,7 +77,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const taskSchema = z.object({
@@ -86,16 +85,10 @@ const taskSchema = z.object({
   description: z.string().min(10, 'Description must be at least 10 characters'),
   reward: z.coerce.number().min(0, 'Reward must be a positive number'),
   requiredLevel: z.coerce.number().min(0, 'Level must be at least 0'),
-  icon: z.string().min(1, 'Icon name is required'),
+  icon: z.string().min(1, 'Icon image is required'),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
-
-const DynamicIcon = ({ name, ...props }: { name: string, [key: string]: any }) => {
-    const LucideIcon = icons[name as keyof typeof icons] as React.FC<any>;
-    if (!LucideIcon) return <HelpCircle {...props} />; // Fallback icon
-    return <LucideIcon {...props} />;
-};
 
 export default function AdminTasksPage() {
   const { user, loading: userLoading } = useUser();
@@ -105,6 +98,7 @@ export default function AdminTasksPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deleteAlert, setDeleteAlert] = useState<{ open: boolean; task: Task | 'all' | null }>({ open: false, task: null });
+  const [iconPreview, setIconPreview] = useState<string | null>(null);
 
 
   const tasksQuery = useMemoFirebase(
@@ -120,7 +114,7 @@ export default function AdminTasksPage() {
       description: '',
       reward: 0,
       requiredLevel: 0,
-      icon: 'HelpCircle',
+      icon: '',
     },
   });
 
@@ -136,8 +130,10 @@ export default function AdminTasksPage() {
         requiredLevel: task.requiredLevel,
         icon: task.icon,
       });
+      setIconPreview(task.icon);
     } else {
-      form.reset({ name: '', description: '', reward: 0, requiredLevel: 0, icon: 'HelpCircle' });
+      form.reset({ name: '', description: '', reward: 0, requiredLevel: 0, icon: '' });
+      setIconPreview(null);
     }
     setIsFormOpen(true);
   };
@@ -252,16 +248,16 @@ export default function AdminTasksPage() {
   };
 
   const initialTasksToSeed = [
-    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0, icon: 'CalendarCheck' },
-    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0, icon: 'Lightbulb' },
-    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0, icon: 'Calculator' },
-    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0, icon: 'BrainCircuit' },
-    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0, icon: 'Puzzle' },
-    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0, icon: 'ShieldCheck' },
-    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 0, icon: 'Shield' },
-    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 0, icon: 'ShieldAlert' },
-    { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2, icon: 'Image' },
-    { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3, icon: 'MessageSquare' },
+    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%97%93%EF%B8%8F' },
+    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%92%A1' },
+    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%A7%AE' },
+    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%A7%A0' },
+    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%A7%A9' },
+    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%9B%A1%EF%B8%8F' },
+    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%9B%A1%EF%B8%8F' },
+    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%9B%A1%EF%B8%8F' },
+    { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%96%BC%EF%B8%8F' },
+    { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%92%AC' },
   ];
 
   const seedDatabase = async () => {
@@ -294,6 +290,19 @@ export default function AdminTasksPage() {
             title: 'Seeding Failed',
             description: 'You do not have permission to create tasks.',
         });
+    }
+  };
+  
+  const handleIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataUri = reader.result as string;
+        form.setValue('icon', dataUri, { shouldValidate: true });
+        setIconPreview(dataUri);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -345,9 +354,10 @@ export default function AdminTasksPage() {
                   <TableRow key={task.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar>
-                            <AvatarFallback className="bg-secondary">
-                                <DynamicIcon name={task.icon} className="size-5 text-muted-foreground" />
+                        <Avatar className="rounded-md">
+                            <AvatarImage src={task.icon} alt={task.name} className="object-cover" />
+                            <AvatarFallback className="bg-secondary rounded-md">
+                                <HelpCircle className="size-5 text-muted-foreground" />
                             </AvatarFallback>
                         </Avatar>
                         <div>
@@ -433,19 +443,16 @@ export default function AdminTasksPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="icon"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Icon Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., CalendarCheck" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+              <FormItem>
+                <FormLabel>Task Icon</FormLabel>
+                <FormControl>
+                    <Input type="file" accept="image/*" onChange={handleIconUpload} />
+                </FormControl>
+                <FormMessage>{form.formState.errors.icon?.message}</FormMessage>
+                {iconPreview && (
+                    <img src={iconPreview} alt="Icon preview" className="h-12 w-12 object-cover rounded-md mt-2" />
                 )}
-              />
+             </FormItem>
               <FormField
                 control={form.control}
                 name="description"
