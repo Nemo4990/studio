@@ -69,7 +69,8 @@ export default function TasksPage() {
         const isGameTask = GAME_TASK_IDS.includes(task.id);
         const hasBeenSubmitted = submittedTaskIds.has(task.id);
         const isCompleted = !isGameTask && hasBeenSubmitted;
-        const isLocked = user.level < task.requiredLevel;
+        // Lock all tasks if user is level 0, otherwise lock based on required level.
+        const isLocked = user.level < 1 || user.level < task.requiredLevel;
         const status = isCompleted ? 'completed' : isLocked ? 'locked' : 'available';
 
         let trialsLeft: number | undefined;
@@ -106,6 +107,9 @@ export default function TasksPage() {
   const pageDescription = useMemo(() => {
     if (isLoading || !user) {
       return "Complete tasks to earn crypto rewards and level up.";
+    }
+    if (user.level < 1) {
+        return "Make a deposit to reach Level 1 and unlock your first tasks!";
     }
     let description = `Level ${user.level} | ${availableTasksCount} tasks available.`;
     if (lockedTasksCount > 0) {
