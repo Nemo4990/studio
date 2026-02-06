@@ -17,6 +17,7 @@ import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { FirestorePermissionError, errorEmitter } from '@/firebase';
 
 export function SignupForm() {
   const [name, setName] = useState('');
@@ -28,46 +29,64 @@ export function SignupForm() {
   const auth = getAuth();
   const firestore = getFirestore();
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
 
-      const userProfileData = {
-        id: user.uid,
-        name,
-        email,
-        role: email === 'admin@taskverse.io' ? 'admin' : 'user',
-        level: 0,
-        walletBalance: 0,
-        createdAt: serverTimestamp(),
-        avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`,
-        phoneNumber: '',
-        country: '',
-        state: '',
-        taskAttempts: {},
-      };
-      
-      const userDocRef = doc(firestore, 'users', user.uid);
+    createUserWithEmailAndPassword(auth, email, password)
+      .then(userCredential => {
+        const user = userCredential.user;
+        const userProfileData = {
+            id: user.uid,
+            name,
+            email,
+            role: email === 'admin@taskverse.io' ? 'admin' : 'user',
+            level: 0,
+            walletBalance: 0,
+            createdAt: serverTimestamp(),
+            avatarUrl: `https://picsum.photos/seed/${user.uid}/40/40`,
+            phoneNumber: '',
+            country: '',
+            state: '',
+            taskAttempts: {},
+        };
+        const userDocRef = doc(firestore, 'users', user.uid);
 
-      await setDoc(userDocRef, userProfileData);
-
-      toast({
-        title: 'Account Created',
-        description: "Welcome to TaskVerse!",
+        // Return the promise from setDoc to chain it
+        return setDoc(userDocRef, userProfileData)
+          .then(() => {
+            toast({
+              title: 'Account Created',
+              description: "Welcome to TaskVerse!",
+            });
+            router.push('/dashboard');
+          })
+          .catch(serverError => {
+            // This catches Firestore errors
+            const permissionError = new FirestorePermissionError({
+              path: userDocRef.path,
+              operation: 'create',
+              requestResourceData: userProfileData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+              variant: 'destructive',
+              title: 'Signup Failed',
+              description: 'Could not create your user profile. Please check permissions.',
+            });
+          });
+      })
+      .catch(error => {
+        // This catches Authentication errors
+        toast({
+          variant: 'destructive',
+          title: 'Signup Failed',
+          description: error.message,
+        });
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      router.push('/dashboard');
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Signup Failed',
-        description: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (

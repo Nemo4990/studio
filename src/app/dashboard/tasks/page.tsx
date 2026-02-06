@@ -13,11 +13,11 @@ import {
 import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
-import { collection, doc, serverTimestamp, runTransaction, Timestamp, query, writeBatch } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
-import type { Task, TaskSubmission, User } from '@/lib/types';
+import type { Task, TaskSubmission } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 import { PurchaseTrialsDialog } from '@/components/dashboard/purchase-trials-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -40,6 +40,8 @@ export default function TasksPage() {
   const [isQuizOpen, setIsQuizOpen] = useState(false);
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
+  const [orderedTasks, setOrderedTasks] = useState<ProcessedTask[]>([]);
+  const personalizationRan = useRef(false);
 
   // Fetch all tasks
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
@@ -55,7 +57,7 @@ export default function TasksPage() {
   const isLoading = userLoading || tasksLoading || submissionsLoading;
 
   const processedTasks = useMemo((): ProcessedTask[] => {
-    if (isLoading || !tasks || !user) return [];
+    if (!tasks || !user) return [];
 
     const submittedTaskIds = new Set(
       userSubmissions
@@ -63,14 +65,9 @@ export default function TasksPage() {
         .map(s => s.taskId) ?? []
     );
 
-    const baseProcessedTasks = tasks
-      .map(task => {
+    return tasks.map(task => {
         const isGameTask = GAME_TASK_IDS.includes(task.id);
-        
         const hasBeenSubmitted = submittedTaskIds.has(task.id);
-        
-        // Game tasks are repeatable and never "completed", only out of trials.
-        // One-off tasks are completed once successfully submitted.
         const isCompleted = !isGameTask && hasBeenSubmitted;
         const isLocked = user.level < task.requiredLevel;
         const status = isCompleted ? 'completed' : isLocked ? 'locked' : 'available';
@@ -90,12 +87,17 @@ export default function TasksPage() {
 
         return { ...task, status, trialsLeft, isDisabled };
       });
-    
-    // Fallback to default sorting
-    return baseProcessedTasks.sort((a, b) => a.requiredLevel - b.requiredLevel);
-
-  }, [tasks, user, userSubmissions, isLoading]);
+  }, [tasks, user, userSubmissions]);
   
+  useEffect(() => {
+    // This effect runs when the base processedTasks array is calculated.
+    // It sets the initial order, which is the default sort.
+    const initialOrder = [...processedTasks].sort((a, b) => a.requiredLevel - b.requiredLevel);
+    setOrderedTasks(initialOrder);
+
+  }, [processedTasks]);
+
+
   const handleGenericSubmit = (task: Task, proof?: string) => {
     if (!user || !firestore) return;
     
@@ -132,18 +134,17 @@ export default function TasksPage() {
   };
 
 
-  const handleDailyCheckin = async (task: Task) => {
+  const handleDailyCheckin = (task: Task) => {
     if (!user || !firestore || task.isDisabled) return;
 
     const userRef = doc(firestore, 'users', user.id);
     
-    try {
-      await runTransaction(firestore, async (transaction) => {
+    runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists()) throw new Error("User document does not exist!");
 
         const userSubmissionRef = doc(collection(firestore, 'users', user.id, 'submissions'));
-        const topLevelSubmissionRef = doc(firestore, 'submissions', userSubmissionRef.id);
+        const topLevelSubmissionRef = doc(collection(firestore, 'submissions'), userSubmissionRef.id);
 
         const submissionData = {
           id: userSubmissionRef.id,
@@ -160,26 +161,32 @@ export default function TasksPage() {
         transaction.set(userSubmissionRef, submissionData);
         transaction.set(topLevelSubmissionRef, submissionData);
         transaction.update(userRef, { lastDailyCheckin: serverTimestamp() });
+      })
+      .then(() => {
+        toast({ title: 'Task Submitted!', description: `Your submission for "${task.name}" is pending review.` });
+      })
+      .catch((error: any) => {
+        const permissionError = new FirestorePermissionError({
+            path: userRef.path, // Path of the most likely failure point
+            operation: 'write',
+            requestResourceData: { action: 'Daily Check-in' }
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: "destructive", title: "Error", description: "Could not process daily check-in. Check permissions." });
       });
-
-      toast({ title: 'Task Submitted!', description: `Your submission for "${task.name}" is pending review.` });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message || "Could not process your daily check-in." });
-    }
   };
   
-  const handleStartGameOrQuiz = async (task: Task) => {
+  const handleStartGameOrQuiz = (task: Task) => {
     if (!user || !firestore || (task.trialsLeft ?? 0) <= 0) return;
 
     const userRef = doc(firestore, 'users', user.id);
     const newAttempts = { ...user.taskAttempts, [task.id]: (user.taskAttempts?.[task.id] ?? 0) + 1 };
 
-    try {
-        await runTransaction(firestore, tx => {
-            tx.update(userRef, { taskAttempts: newAttempts });
-            return Promise.resolve();
-        });
-
+    runTransaction(firestore, tx => {
+        tx.update(userRef, { taskAttempts: newAttempts });
+        return Promise.resolve();
+    })
+    .then(() => {
         // Now, either navigate or open dialog
         if (task.id === '2') {
             setIsQuizOpen(true);
@@ -190,10 +197,16 @@ export default function TasksPage() {
         } else if (task.id === '13') {
             router.push('/dashboard/tasks/logic-puzzle');
         }
-
-    } catch (error) {
-        toast({ variant: "destructive", title: "Error Starting Game", description: "Could not update your attempts. Please try again." });
-    }
+    })
+    .catch((serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'update',
+            requestResourceData: { taskAttempts: newAttempts },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: "destructive", title: "Error Starting Game", description: "Could not update your attempts. Check permissions." });
+    });
   };
 
   const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
@@ -214,7 +227,7 @@ export default function TasksPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {processedTasks.map((task) => (
+          {orderedTasks.map((task) => (
             <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -259,7 +272,7 @@ export default function TasksPage() {
               </CardFooter>
             </Card>
           ))}
-          {processedTasks.length === 0 && (
+          {orderedTasks.length === 0 && (
             <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">No tasks available at the moment. Check back later!</div>
           )}
         </div>

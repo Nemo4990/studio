@@ -31,6 +31,8 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
+  errorEmitter, 
+  FirestorePermissionError
 } from '@/firebase';
 import {
   collection,
@@ -136,7 +138,7 @@ export default function WalletPage() {
     toast({ title: 'Copied to clipboard!' });
   };
 
-  const handleDepositSubmit = async () => {
+  const handleDepositSubmit = () => {
     if (!user || !user.country || !firestore || !selectedAgent || !depositAmount) {
       toast({
         variant: 'destructive',
@@ -169,7 +171,7 @@ export default function WalletPage() {
     const reader = new FileReader();
     reader.readAsDataURL(depositProofFile);
 
-    reader.onload = async () => {
+    reader.onload = () => {
       const proofOfPaymentUrl = reader.result as string;
 
       const userDepositRef = doc(collection(firestore, 'users', user.id, 'deposits'));
@@ -187,13 +189,11 @@ export default function WalletPage() {
         createdAt: serverTimestamp(),
       };
       
-      try {
-        // Use a batch to write to both locations atomically
-        const batch = writeBatch(firestore);
-        batch.set(userDepositRef, depositData);
-        batch.set(topLevelDepositRef, depositData);
-        await batch.commit();
-
+      const batch = writeBatch(firestore);
+      batch.set(userDepositRef, depositData);
+      batch.set(topLevelDepositRef, depositData);
+      
+      batch.commit().then(() => {
         toast({
           title: 'Deposit Request Submitted!',
           description: 'Your request is pending admin approval.',
@@ -204,16 +204,21 @@ export default function WalletPage() {
         if (depositProofInputRef.current) {
           depositProofInputRef.current.value = '';
         }
-      } catch (error) {
-         console.error("Deposit submission failed:", error);
+      }).catch((error) => {
+         const permissionError = new FirestorePermissionError({
+            path: topLevelDepositRef.path,
+            operation: 'create',
+            requestResourceData: depositData,
+         });
+         errorEmitter.emit('permission-error', permissionError);
          toast({
           variant: 'destructive',
           title: 'Submission Failed',
-          description: 'There was a problem submitting your request. Please check security rules and try again.',
+          description: 'There was a problem submitting your request. Please check permissions.',
         });
-      } finally {
+      }).finally(() => {
         setLoading(false);
-      }
+      });
     };
 
     reader.onerror = (error) => {
@@ -227,7 +232,7 @@ export default function WalletPage() {
     };
   };
 
-  const handleWithdrawalSubmit = async () => {
+  const handleWithdrawalSubmit = () => {
     if (!user || !firestore || !withdrawalAmount || !bankName || !accountNumber || !accountName) {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.' });
       return;
@@ -264,12 +269,11 @@ export default function WalletPage() {
       requestedAt: serverTimestamp(),
     };
 
-    try {
-      const batch = writeBatch(firestore);
-      batch.set(userWithdrawalRef, withdrawalData);
-      batch.set(topLevelWithdrawalRef, withdrawalData);
-      await batch.commit();
-
+    const batch = writeBatch(firestore);
+    batch.set(userWithdrawalRef, withdrawalData);
+    batch.set(topLevelWithdrawalRef, withdrawalData);
+    
+    batch.commit().then(() => {
       toast({
         title: 'Withdrawal Request Submitted!',
         description: 'Your request is pending admin approval.',
@@ -278,16 +282,21 @@ export default function WalletPage() {
       setBankName('');
       setAccountNumber('');
       setAccountName('');
-    } catch (error) {
-      console.error("Withdrawal submission failed:", error);
+    }).catch((error) => {
+      const permissionError = new FirestorePermissionError({
+          path: topLevelWithdrawalRef.path,
+          operation: 'create',
+          requestResourceData: withdrawalData,
+      });
+      errorEmitter.emit('permission-error', permissionError);
       toast({
         variant: 'destructive',
         title: 'Submission Failed',
-        description: 'There was a problem submitting your request. Please check security rules and try again.',
+        description: 'There was a problem submitting your request. Please check permissions.',
       });
-    } finally {
+    }).finally(() => {
       setLoading(false);
-    }
+    });
   };
 
 

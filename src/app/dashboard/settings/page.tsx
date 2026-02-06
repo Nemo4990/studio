@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useUser, useAuth, useFirestore } from '@/firebase';
+import { useUser, useAuth, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -44,33 +44,42 @@ export default function SettingsPage() {
     }
   }, [user]);
 
-  const handleProfileUpdate = async (e: React.FormEvent) => {
+  const handleProfileUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !firestore) return;
     setIsSavingProfile(true);
 
     const userDocRef = doc(firestore, 'users', user.id);
+    const updatedData = {
+      name,
+      phoneNumber,
+      country,
+      state
+    };
     
-    try {
-      await updateDoc(userDocRef, {
-        name,
-        phoneNumber,
-        country,
-        state
+    updateDoc(userDocRef, updatedData)
+      .then(() => {
+        toast({
+          title: 'Profile Updated',
+          description: 'Your changes have been saved successfully.',
+        });
+      })
+      .catch((error: any) => {
+        const permissionError = new FirestorePermissionError({
+            path: userDocRef.path,
+            operation: 'update',
+            requestResourceData: updatedData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          variant: 'destructive',
+          title: 'Update Failed',
+          description: 'Could not update your profile. Please check permissions.',
+        });
+      })
+      .finally(() => {
+        setIsSavingProfile(false);
       });
-      toast({
-        title: 'Profile Updated',
-        description: 'Your changes have been saved successfully.',
-      });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Update Failed',
-        description: error.message || 'Could not update your profile.',
-      });
-    } finally {
-      setIsSavingProfile(false);
-    }
   };
 
   const handlePasswordReset = async () => {
@@ -83,7 +92,7 @@ export default function SettingsPage() {
         title: 'Password Reset Email Sent',
         description: `An email has been sent to ${user.email} with instructions.`,
       });
-    } catch (error: any) {
+    } catch (error: any) => {
       toast({
         variant: 'destructive',
         title: 'Request Failed',

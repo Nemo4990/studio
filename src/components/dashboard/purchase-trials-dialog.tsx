@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, runTransaction } from 'firebase/firestore';
 import type { Task, User } from '@/lib/types';
 import { Coins } from 'lucide-react';
@@ -30,7 +30,7 @@ export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTr
   const firestore = useFirestore();
   const [isPurchasing, setIsPurchasing] = useState(false);
 
-  const handlePurchase = async () => {
+  const handlePurchase = () => {
     if (!firestore) return;
     
     if (user.walletBalance < PURCHASE_COST) {
@@ -45,8 +45,7 @@ export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTr
     setIsPurchasing(true);
     const userRef = doc(firestore, 'users', user.id);
 
-    try {
-      await runTransaction(firestore, async (transaction) => {
+    runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists()) {
           throw new Error('User document not found.');
@@ -59,30 +58,40 @@ export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTr
 
         const newBalance = currentBalance - PURCHASE_COST;
         const currentAttempts = userDoc.data().taskAttempts || {};
-        delete currentAttempts[task.id]; // Reset attempts for this task
+        // Resetting attempts to 0 will give them 5 fresh trials
+        currentAttempts[task.id] = 0; 
 
         transaction.update(userRef, {
           walletBalance: newBalance,
           taskAttempts: currentAttempts,
         });
+      })
+      .then(() => {
+        toast({
+            title: 'Purchase Successful!',
+            description: `You now have 5 more trials for "${task.name}".`,
+        });
+        onClose();
+      })
+      .catch((error: any) => {
+        const permissionError = new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'update',
+            requestResourceData: {
+                walletBalance: `(balance - ${PURCHASE_COST})`,
+                taskAttempts: `(reset for task ${task.id})`,
+            }
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+            variant: 'destructive',
+            title: 'Purchase Failed',
+            description: 'There was a problem processing your purchase. Please check permissions.',
+        });
+      })
+      .finally(() => {
+        setIsPurchasing(false);
       });
-
-      toast({
-        title: 'Purchase Successful!',
-        description: `You now have 5 more trials for "${task.name}".`,
-      });
-      onClose();
-
-    } catch (error: any) {
-      console.error('Trial purchase failed:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Purchase Failed',
-        description: error.message || 'There was a problem processing your purchase.',
-      });
-    } finally {
-      setIsPurchasing(false);
-    }
   };
 
   return (
