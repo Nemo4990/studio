@@ -29,6 +29,7 @@ export type Task = {
   description: string;
   reward: number;
   requiredLevel: number;
+  icon: string;
   status?: 'available' | 'completed' | 'locked';
 };
 

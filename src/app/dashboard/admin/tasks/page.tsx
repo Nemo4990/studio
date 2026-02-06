@@ -34,7 +34,8 @@ import {
   getDocs,
   writeBatch,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle, Coins, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Coins, Trash2, HelpCircle } from 'lucide-react';
+import * as icons from 'lucide-react';
 import React, { useState } from 'react';
 import type { Task } from '@/lib/types';
 import {
@@ -77,15 +78,24 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
 
 const taskSchema = z.object({
   name: z.string().min(3, 'Task name must be at least 3 characters'),
   description: z.string().min(10, 'Description must be at least 10 characters'),
   reward: z.coerce.number().min(0, 'Reward must be a positive number'),
   requiredLevel: z.coerce.number().min(0, 'Level must be at least 0'),
+  icon: z.string().min(1, 'Icon name is required'),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
+
+const DynamicIcon = ({ name, ...props }: { name: string, [key: string]: any }) => {
+    const LucideIcon = icons[name as keyof typeof icons] as React.FC<any>;
+    if (!LucideIcon) return <HelpCircle {...props} />; // Fallback icon
+    return <LucideIcon {...props} />;
+};
 
 export default function AdminTasksPage() {
   const { user, loading: userLoading } = useUser();
@@ -110,6 +120,7 @@ export default function AdminTasksPage() {
       description: '',
       reward: 0,
       requiredLevel: 0,
+      icon: 'HelpCircle',
     },
   });
 
@@ -123,9 +134,10 @@ export default function AdminTasksPage() {
         description: task.description,
         reward: task.reward,
         requiredLevel: task.requiredLevel,
+        icon: task.icon,
       });
     } else {
-      form.reset({ name: '', description: '', reward: 0, requiredLevel: 0 });
+      form.reset({ name: '', description: '', reward: 0, requiredLevel: 0, icon: 'HelpCircle' });
     }
     setIsFormOpen(true);
   };
@@ -240,16 +252,16 @@ export default function AdminTasksPage() {
   };
 
   const initialTasksToSeed = [
-    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0 },
-    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0 },
-    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0 },
-    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0 },
-    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0 },
-    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0 },
-    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 0 },
-    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 0 },
-    { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2 },
-    { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3 },
+    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0, icon: 'CalendarCheck' },
+    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0, icon: 'Lightbulb' },
+    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0, icon: 'Calculator' },
+    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0, icon: 'BrainCircuit' },
+    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0, icon: 'Puzzle' },
+    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0, icon: 'ShieldCheck' },
+    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 0, icon: 'Shield' },
+    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 0, icon: 'ShieldAlert' },
+    { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2, icon: 'Image' },
+    { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3, icon: 'MessageSquare' },
   ];
 
   const seedDatabase = async () => {
@@ -332,9 +344,18 @@ export default function AdminTasksPage() {
                 {tasks.map((task) => (
                   <TableRow key={task.id}>
                     <TableCell>
-                      <div className="font-medium">{task.name}</div>
-                      <div className="line-clamp-1 text-sm text-muted-foreground">
-                        {task.description}
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                            <AvatarFallback className="bg-secondary">
+                                <DynamicIcon name={task.icon} className="size-5 text-muted-foreground" />
+                            </AvatarFallback>
+                        </Avatar>
+                        <div>
+                            <div className="font-medium">{task.name}</div>
+                            <div className="line-clamp-1 text-sm text-muted-foreground">
+                                {task.description}
+                            </div>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -407,6 +428,19 @@ export default function AdminTasksPage() {
                     <FormLabel>Task Name</FormLabel>
                     <FormControl>
                       <Input placeholder="e.g., Daily Check-in" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="icon"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Icon Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., CalendarCheck" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

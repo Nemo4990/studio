@@ -11,7 +11,8 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
+import { Check, Lock, Sparkles, RefreshCw, HelpCircle } from 'lucide-react';
+import * as icons from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { collection, doc, serverTimestamp, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,13 @@ type ProcessedTask = Task & {
   trialsLeft?: number;
   isDisabled?: boolean;
 };
+
+const DynamicIcon = ({ name, ...props }: { name: string, [key: string]: any }) => {
+    const LucideIcon = icons[name as keyof typeof icons] as React.FC<any>;
+    if (!LucideIcon) return <HelpCircle {...props} />; // Fallback icon
+    return <LucideIcon {...props} />;
+};
+
 
 export default function TasksPage() {
   const { user, loading: userLoading } = useUser();
@@ -247,7 +255,10 @@ export default function TasksPage() {
             <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <span className="font-headline">{task.name}</span>
+                  <div className='flex items-center gap-3'>
+                    <DynamicIcon name={task.icon} className="size-6 text-primary" />
+                    <span className="font-headline">{task.name}</span>
+                  </div>
                   {task.status === 'available' && <Sparkles className="size-5 text-accent" />}
                   {task.status === 'locked' && <Lock className="size-5 text-muted-foreground" />}
                   {task.status === 'completed' && <Check className="size-5 text-green-500" />}

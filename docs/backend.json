@@ -86,6 +86,10 @@
         "requiredLevel": {
           "type": "number",
           "description": "The user level required to access the task."
+        },
+        "icon": {
+          "type": "string",
+          "description": "The name of the lucide-react icon for the task."
         }
       },
       "required": [
@@ -93,7 +97,8 @@
         "name",
         "description",
         "reward",
-        "requiredLevel"
+        "requiredLevel",
+        "icon"
       ]
     },
     "Submission": {
