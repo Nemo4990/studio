@@ -47,12 +47,23 @@ export function useUser(): UseUserReturn {
     const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Manually construct the user profile to ensure type safety and correct date conversion.
+        // This avoids potential issues with the spread operator (...) on Firestore data objects.
         const userProfile: User = {
             id: docSnap.id,
-            ...data,
+            name: data.name || 'Anonymous',
+            email: data.email || '',
+            avatarUrl: data.avatarUrl || '',
+            role: data.role || 'user',
+            level: data.level || 0,
+            walletBalance: data.walletBalance || 0,
             createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
             lastDailyCheckin: data.lastDailyCheckin?.toDate ? data.lastDailyCheckin.toDate() : undefined,
-        } as User;
+            phoneNumber: data.phoneNumber || '',
+            country: data.country || '',
+            state: data.state || '',
+            taskAttempts: data.taskAttempts || {},
+        };
         setProfile(userProfile);
         setProfileError(null);
         setProfileLoading(false);
