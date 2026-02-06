@@ -8,9 +8,11 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 
 const TOTAL_QUESTIONS = 10;
 const TIME_PER_QUESTION = 5; // seconds
+const INITIAL_SUB_TRIALS = 3;
 
 type GameState = 'not-started' | 'playing' | 'finished';
 
@@ -49,9 +51,11 @@ export default function SpeedmathGame() {
   const [timer, setTimer] = useState(TIME_PER_QUESTION);
   const [userAnswer, setUserAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subTrials, setSubTrials] = useState(INITIAL_SUB_TRIALS);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const { user } = useUser();
   const firestore = useFirestore();
@@ -73,8 +77,8 @@ export default function SpeedmathGame() {
       });
     }, 1000);
   };
-
-  const startGame = () => {
+  
+  const startRound = () => {
     const newQuestions = Array.from({ length: TOTAL_QUESTIONS }, generateQuestion);
     setQuestions(newQuestions);
     setCurrentQuestionIndex(0);
@@ -83,6 +87,18 @@ export default function SpeedmathGame() {
     startTimer();
     setUserAnswer('');
     setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const startGame = () => {
+    setSubTrials(INITIAL_SUB_TRIALS);
+    startRound();
+  };
+
+  const handlePlayAgain = () => {
+    if (subTrials > 1) {
+      setSubTrials(prev => prev - 1);
+      startRound();
+    }
   };
   
   const handleNextQuestion = (timesUp = false) => {
@@ -144,6 +160,7 @@ export default function SpeedmathGame() {
       .then(() => {
         toast({ title: 'Challenge Complete!', description: 'Your submission is pending review.' });
         setGameState('not-started'); // Reset game
+        router.push('/dashboard/tasks');
       })
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
@@ -173,7 +190,7 @@ export default function SpeedmathGame() {
           <>
             <div className="w-full text-center mb-4">
                 <p className="text-sm text-muted-foreground">Question {currentQuestionIndex + 1} of {TOTAL_QUESTIONS}</p>
-                <p className="text-sm text-muted-foreground">Score: {score}</p>
+                <p className="text-sm text-muted-foreground">Score: {score} | Attempts left: {subTrials}</p>
             </div>
             <Progress value={(timer / TIME_PER_QUESTION) * 100} className="w-full h-2 mb-6" />
             <p className="font-headline text-5xl md:text-7xl font-bold mb-8 text-center">{currentQuestion.text}</p>
@@ -197,14 +214,26 @@ export default function SpeedmathGame() {
             <p className="text-muted-foreground mb-4">You scored</p>
             <p className="font-headline text-7xl font-bold mb-6">{scorePercentage.toFixed(0)}%</p>
             {hasPassed ? (
-                <p className="text-green-500 mb-6">Congratulations! You passed the challenge.</p>
+                <>
+                    <p className="text-green-500 mb-6">Congratulations! You passed the challenge.</p>
+                    <Button onClick={handleClaimReward} disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Claim Reward'}</Button>
+                </>
             ) : (
-                <p className="text-destructive mb-6">So close! You need 80% to pass. Try again!</p>
+                <>
+                  <p className="text-destructive mb-6">So close! You need 80% to pass.</p>
+                  {subTrials > 1 ? (
+                     <div className="flex flex-col items-center gap-2">
+                        <Button onClick={handlePlayAgain} variant="outline">Play Again</Button>
+                        <p className="text-xs text-muted-foreground">({subTrials - 1} {subTrials - 1 === 1 ? 'attempt' : 'attempts'} remaining)</p>
+                     </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-4">
+                        <p className="text-muted-foreground">No more attempts for this session. Better luck next time!</p>
+                        <Button onClick={() => router.push('/dashboard/tasks')} variant="secondary">Back to Tasks</Button>
+                    </div>
+                  )}
+                </>
             )}
-            <div className="flex gap-4">
-                <Button onClick={startGame} variant="outline">Play Again</Button>
-                {hasPassed && <Button onClick={handleClaimReward} disabled={isSubmitting}>{isSubmitting ? 'Submitting...' : 'Claim Reward'}</Button>}
-            </div>
           </div>
         );
       case 'not-started':
