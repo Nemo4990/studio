@@ -63,7 +63,11 @@ export function useDoc<T = any>(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
         if (snapshot.exists()) {
-          setData({ ...(snapshot.data() as T), id: snapshot.id });
+           // The spread operator `...snapshot.data()` can be unsafe. It might carry over
+          // internal Firestore types that interfere with React's state management.
+          // This creates a clean, plain JavaScript object.
+          const plainData = JSON.parse(JSON.stringify(snapshot.data()));
+          setData({ ...(plainData as T), id: snapshot.id });
         } else {
           // Document does not exist
           setData(null);

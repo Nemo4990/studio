@@ -76,10 +76,14 @@ export function useCollection<T = any>(
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
-        }
+        const results: ResultItemType[] = snapshot.docs.map((doc) => {
+          // The spread operator `...doc.data()` can be unsafe. It might carry over
+          // internal Firestore types that interfere with React's state management,
+          // causing UI freezes, especially with large data like image URIs.
+          // This creates a clean, plain JavaScript object.
+          const plainData = JSON.parse(JSON.stringify(doc.data()));
+          return { id: doc.id, ...plainData };
+        });
         setData(results);
         setError(null);
         setIsLoading(false);
