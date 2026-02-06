@@ -46,9 +46,10 @@ export function useUser(): UseUserReturn {
     setProfileLoading(true);
     const unsubscribeSnapshot = onSnapshot(userDocRef, async (docSnap) => {
       if (docSnap.exists()) {
-        const data = docSnap.data();
-        // Manually construct the user profile to ensure type safety and correct date conversion.
-        // This avoids potential issues with the spread operator (...) on Firestore data objects.
+        // Deep clone and sanitize the data. This converts Timestamps to strings.
+        const data = JSON.parse(JSON.stringify(docSnap.data()));
+
+        // Manually construct the user profile, ensuring Date objects are correctly parsed from strings.
         const userProfile: User = {
             id: docSnap.id,
             name: data.name || 'Anonymous',
@@ -57,8 +58,9 @@ export function useUser(): UseUserReturn {
             role: data.role || 'user',
             level: data.level || 0,
             walletBalance: data.walletBalance || 0,
-            createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(),
-            lastDailyCheckin: data.lastDailyCheckin?.toDate ? data.lastDailyCheckin.toDate() : undefined,
+            // After stringify/parse, Timestamps become ISO strings. Convert them back to Dates.
+            createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+            lastDailyCheckin: data.lastDailyCheckin ? new Date(data.lastDailyCheckin) : undefined,
             phoneNumber: data.phoneNumber || '',
             country: data.country || '',
             state: data.state || '',
