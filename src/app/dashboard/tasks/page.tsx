@@ -260,19 +260,6 @@ export default function TasksPage() {
 
   const quizTask = useMemo(() => tasks?.find(t => t.id === '2'), [tasks]);
 
-  if (isLoading || isPersonalizing) {
-    return (
-      <>
-        <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
-          ))}
-        </div>
-      </>
-    );
-  }
-
   return (
     <>
       <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
@@ -281,56 +268,64 @@ export default function TasksPage() {
       {purchaseTask && user && <PurchaseTrialsDialog isOpen={!!purchaseTask} onClose={() => setPurchaseTask(null)} task={purchaseTask} user={user} />}
       {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward, message) => handleGenericSubmit({ ...nebulaLedgerTask, reward }, message)} />}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {processedTasks.map((task) => (
-          <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="font-headline">{task.name}</span>
-                {task.status === 'available' && <Sparkles className="size-5 text-accent" />}
-                {task.status === 'locked' && <Lock className="size-5 text-muted-foreground" />}
-                {task.status === 'completed' && <Check className="size-5 text-green-500" />}
-              </CardTitle>
-              <CardDescription>{task.status === 'locked' ? `Requires Level ${task.requiredLevel}` : `${task.reward.toLocaleString()} Coins Reward`}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow">
-              <p className="text-sm text-muted-foreground">{task.description}</p>
-              {task.trialsLeft !== undefined && task.status === 'available' && (
-                <p className="text-xs text-muted-foreground mt-2">Trials left: {Math.max(0, task.trialsLeft)}</p>
-              )}
-            </CardContent>
-            <CardFooter>
-              {task.status === 'completed' && <Button className="w-full" variant="outline" disabled>Completed</Button>}
-              {task.status === 'locked' && <Button className="w-full" disabled>Locked</Button>}
-              {task.status === 'available' && (
-                <>
-                  {task.id === '1' && <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>}
-                  
-                  {task.id.startsWith('nl-') && <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>}
+      {isLoading || isPersonalizing ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {processedTasks.map((task) => (
+            <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span className="font-headline">{task.name}</span>
+                  {task.status === 'available' && <Sparkles className="size-5 text-accent" />}
+                  {task.status === 'locked' && <Lock className="size-5 text-muted-foreground" />}
+                  {task.status === 'completed' && <Check className="size-5 text-green-500" />}
+                </CardTitle>
+                <CardDescription>{task.status === 'locked' ? `Requires Level ${task.requiredLevel}` : `${task.reward.toLocaleString()} Coins Reward`}</CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <p className="text-sm text-muted-foreground">{task.description}</p>
+                {task.trialsLeft !== undefined && task.status === 'available' && (
+                  <p className="text-xs text-muted-foreground mt-2">Trials left: {Math.max(0, task.trialsLeft)}</p>
+                )}
+              </CardContent>
+              <CardFooter>
+                {task.status === 'completed' && <Button className="w-full" variant="outline" disabled>Completed</Button>}
+                {task.status === 'locked' && <Button className="w-full" disabled>Locked</Button>}
+                {task.status === 'available' && (
+                  <>
+                    {task.id === '1' && <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>}
+                    
+                    {task.id.startsWith('nl-') && <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>}
 
-                  {GAME_TASK_IDS.includes(task.id) && (
-                    (task.trialsLeft ?? 0) > 0 ? (
-                        <Button className="w-full" onClick={() => handleStartGameOrQuiz(task)}>
-                            {task.id === '2' ? 'Start Quiz' : 'Start Challenge'}
-                        </Button>
-                    ) : (
-                        <Button className="w-full" onClick={() => setPurchaseTask(task)}>
-                            <RefreshCw className="mr-2"/>Purchase More Trials
-                        </Button>
-                    )
-                  )}
-                  
-                  {/* Fallback for other generic tasks */}
-                  {!['1', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
-                </>
-              )}
-            </CardFooter>
-          </Card>
-        ))}
-        {processedTasks.length === 0 && !isLoading && (
-          <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">No tasks available at the moment. Check back later!</div>
-        )}
-      </div>
+                    {GAME_TASK_IDS.includes(task.id) && (
+                      (task.trialsLeft ?? 0) > 0 ? (
+                          <Button className="w-full" onClick={() => handleStartGameOrQuiz(task)}>
+                              {task.id === '2' ? 'Start Quiz' : 'Start Challenge'}
+                          </Button>
+                      ) : (
+                          <Button className="w-full" onClick={() => setPurchaseTask(task)}>
+                              <RefreshCw className="mr-2"/>Purchase More Trials
+                          </Button>
+                      )
+                    )}
+                    
+                    {/* Fallback for other generic tasks */}
+                    {!['1', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
+                  </>
+                )}
+              </CardFooter>
+            </Card>
+          ))}
+          {processedTasks.length === 0 && (
+            <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">No tasks available at the moment. Check back later!</div>
+          )}
+        </div>
+      )}
     </>
   );
 }
