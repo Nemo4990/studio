@@ -2,7 +2,7 @@
 
 import PageHeader from '@/components/dashboard/page-header';
 import StatCard from '@/components/dashboard/stat-card';
-import { BarChart, CheckCircle2, Star, Coins } from 'lucide-react';
+import { BarChart, CheckCircle2, Star, Coins, Wallet, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -56,6 +56,35 @@ export default function UserDashboardPage() {
             </Card>
         </div>
       )}
+
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Link href="/dashboard/tasks">
+                <Card className="group card-glow hover:border-primary/50 transition-colors">
+                    <CardHeader className="flex flex-row items-center gap-4">
+                        <div className="p-3 bg-secondary rounded-lg">
+                           <CheckSquare className="size-6 text-primary" />
+                        </div>
+                        <div>
+                            <CardTitle className="font-headline text-xl">View Tasks</CardTitle>
+                            <CardDescription>Complete tasks to earn rewards.</CardDescription>
+                        </div>
+                    </CardHeader>
+                </Card>
+            </Link>
+             <Link href="/dashboard/wallet">
+                <Card className="group card-glow hover:border-primary/50 transition-colors">
+                    <CardHeader className="flex flex-row items-center gap-4">
+                         <div className="p-3 bg-secondary rounded-lg">
+                           <Wallet className="size-6 text-primary" />
+                        </div>
+                        <div>
+                            <CardTitle className="font-headline text-xl">Go to Wallet</CardTitle>
+                            <CardDescription>Manage deposits and withdrawals.</CardDescription>
+                        </div>
+                    </CardHeader>
+                </Card>
+            </Link>
+        </div>
     </>
   );
 }
