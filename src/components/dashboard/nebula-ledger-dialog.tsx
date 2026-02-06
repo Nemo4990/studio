@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Coins, Cpu, ShieldCheck, ShieldAlert, Sparkles, XCircle, CheckCircle } from 'lucide-react';
 import type { Task } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface NebulaLedgerDialogProps {
   isOpen: boolean;
@@ -36,39 +37,76 @@ const nodeConfig = {
     'nl-3': { name: 'Quantum Ledger', risk: 'High', successChance: 0.5, jackpotChance: 0.15, jackpotMultiplier: 10, icon: ShieldAlert },
 }
 
+const generateFakeHash = () => '0x' + [...Array(16)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
+
+const logLines = [
+    'Initializing quantum matrix...',
+    'Authenticating with target node...',
+    () => `Accessing data stream: ${generateFakeHash()}`,
+    'Bypassing firewall layer 1/3...',
+    'Layer 1 breached.',
+    'Bypassing firewall layer 2/3...',
+    () => `Analyzing block: ${generateFakeHash()}`,
+    'Hash mismatch detected. Retrying with alternate key...',
+    () => `Signature verified: ${generateFakeHash()}`,
+    'Bypassing firewall layer 3/3...',
+    'Firewall breached. Accessing core ledger.',
+    'Decrypting root block...',
+    'Finalizing decryption sequence...'
+];
+
 export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: NebulaLedgerDialogProps) {
   const [gameState, setGameState] = useState<GameState>('idle');
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<GameResult | null>(null);
+  const [decryptionLog, setDecryptionLog] = useState<string[]>([]);
+  const logEndRef = useRef<HTMLDivElement | null>(null);
 
   const config = nodeConfig[task.id as keyof typeof nodeConfig] || nodeConfig['nl-1'];
   const Icon = config.icon;
 
   useEffect(() => {
-    if (gameState !== 'decrypting') return;
+    if (gameState === 'decrypting') {
+        setProgress(0);
+        setDecryptionLog(['Connection established.']);
+        
+        let logIndex = 0;
 
-    setProgress(0);
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        const next = prev + Math.random() * 20;
-        if (next >= 100) {
-          clearInterval(interval);
-          runDecryptionLogic();
-          return 100;
-        }
-        return next;
-      });
-    }, 200);
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                const next = prev + 100 / (logLines.length + 1);
+                if (next >= 100) {
+                    clearInterval(interval);
+                    setDecryptionLog(prevLog => [...prevLog, 'Decryption complete.']);
+                    setTimeout(runDecryptionLogic, 500);
+                    return 100;
+                }
+                return next;
+            });
 
-    return () => clearInterval(interval);
+            if (logIndex < logLines.length) {
+                const lineOrFn = logLines[logIndex];
+                const newLine = typeof lineOrFn === 'function' ? lineOrFn() : lineOrFn;
+                setDecryptionLog(prevLog => [...prevLog, newLine]);
+                logIndex++;
+            }
+
+        }, 500); // Slowed down to 500ms for readability
+
+        return () => clearInterval(interval);
+    }
   }, [gameState]);
   
   useEffect(() => {
-    // Reset game state when dialog is re-opened for a new task
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [decryptionLog]);
+  
+  useEffect(() => {
     if (isOpen) {
         setGameState('idle');
         setProgress(0);
         setResult(null);
+        setDecryptionLog([]);
     }
   }, [isOpen, task.id]);
 
@@ -128,12 +166,19 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
         
       case 'decrypting':
         return (
-          <div className="flex flex-col items-center text-center">
-            <Cpu className="size-16 mb-4 text-primary animate-pulse" />
-            <p className="font-bold text-lg">Decrypting Node...</p>
-            <p className="text-sm text-muted-foreground mb-6">Analyzing quantum signatures...</p>
-            <Progress value={progress} className="w-full" />
-          </div>
+            <div className="flex flex-col items-center text-center w-full">
+                <p className="font-bold text-lg">Decrypting Node...</p>
+                <p className="text-sm text-muted-foreground mb-4">Establishing secure connection...</p>
+                
+                <ScrollArea className="h-48 w-full rounded-md border bg-black/50 p-4 my-4 font-mono text-xs text-green-400">
+                    {decryptionLog.map((line, index) => (
+                        <p key={index} className="animate-in fade-in">{`> ${line}`}</p>
+                    ))}
+                    <div ref={logEndRef} />
+                </ScrollArea>
+                
+                <Progress value={progress} className="w-full" />
+            </div>
         );
         
       case 'result':
@@ -169,7 +214,7 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
             High risk, high reward. Decrypt the node to claim your prize.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-6 min-h-[250px] flex items-center justify-center">
+        <div className="py-6 min-h-[350px] flex items-center justify-center">
             {renderContent()}
         </div>
       </DialogContent>
