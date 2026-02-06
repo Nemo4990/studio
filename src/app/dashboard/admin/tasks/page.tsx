@@ -144,7 +144,7 @@ export default function AdminTasksPage() {
     if (deleteAlert.task === 'all') {
       handleDeleteAllTasks();
     } else {
-      handleDeleteTask(deleteAlert.task);
+      handleDeleteTask(deleteAlert.task as Task);
     }
     setDeleteAlert({ open: false, task: null });
   }
@@ -248,16 +248,16 @@ export default function AdminTasksPage() {
   };
 
   const initialTasksToSeed = [
-    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%97%93%EF%B8%8F' },
-    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%92%A1' },
-    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%A7%AE' },
-    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%A7%A0' },
-    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%A7%A9' },
-    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%9B%A1%EF%B8%8F' },
-    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%9B%A1%EF%B8%8F' },
-    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 0, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%9B%A1%EF%B8%8F' },
-    { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%96%BC%EF%B8%8F' },
-    { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3, icon: 'https://placehold.co/40x40/transparent/FFFFFF/png?text=%F0%9F%92%AC' },
+    { id: '1', name: 'Daily Check-in', description: 'Claim your daily bonus just for logging in. Consistency is key!', reward: 200, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Daily+Check-in' },
+    { id: '2', name: 'Crypto Beginner\'s Quiz', description: 'Test your knowledge on basic crypto concepts. Pass the quiz to earn a reward and learn something new!', reward: 1000, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Crypto+Quiz' },
+    { id: '11', name: 'Speedmath Challenge', description: 'Answer as many questions as you can. Get over 80% to win the reward!', reward: 500, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Speedmath' },
+    { id: '12', name: 'Memory Pattern Recall', description: 'Memorize and replicate the sequence of patterns. Reach Level 4 to win!', reward: 500, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Memory' },
+    { id: '13', name: 'Logic Puzzle Solving', description: 'Solve the riddle to prove your wits and earn the reward!', reward: 800, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Logic+Puzzle' },
+    { id: 'nl-1', name: 'Nebula Ledger: Low Risk', description: 'Decrypt a standard data node. High success rate, modest rewards.', reward: 50, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Nebula+Low' },
+    { id: 'nl-2', name: 'Nebula Ledger: Medium Risk', description: 'Tackle an encrypted cache. Good chance of success with better rewards.', reward: 150, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Nebula+Med' },
+    { id: 'nl-3', name: 'Nebula Ledger: High Risk', description: 'Attempt to breach a quantum ledger. Low success rate, massive rewards.', reward: 400, requiredLevel: 0, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Nebula+High' },
+    { id: '3', name: 'Meme Magic Contest', description: 'Create and submit a viral meme about TaskVerse. The best one gets a huge bonus prize!', reward: 2500, requiredLevel: 2, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Meme+Magic' },
+    { id: '4', name: 'Feature Feedback', description: 'Provide constructive feedback on our new wallet feature. Help us build a better app for everyone.', reward: 1500, requiredLevel: 3, icon: 'https://placehold.co/100x100/transparent/FFFFFF/png?text=Feedback' },
   ];
 
   const seedDatabase = async () => {
@@ -354,7 +354,7 @@ export default function AdminTasksPage() {
                   <TableRow key={task.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="rounded-md">
+                        <Avatar className="rounded-md h-12 w-12">
                             <AvatarImage src={task.icon} alt={task.name} className="object-cover" />
                             <AvatarFallback className="bg-secondary rounded-md">
                                 <HelpCircle className="size-5 text-muted-foreground" />

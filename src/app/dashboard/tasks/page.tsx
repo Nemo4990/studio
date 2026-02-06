@@ -90,11 +90,9 @@ export default function TasksPage() {
   }, [tasks, user, userSubmissions]);
   
   useEffect(() => {
-    // This effect runs when the base processedTasks array is calculated.
-    // It sets the initial order, which is the default sort.
+    // When tasks are processed, sort them by required level by default.
     const initialOrder = [...processedTasks].sort((a, b) => a.requiredLevel - b.requiredLevel);
     setOrderedTasks(initialOrder);
-
   }, [processedTasks]);
 
   const availableTasksCount = useMemo(() => {
@@ -259,9 +257,9 @@ export default function TasksPage() {
                 <CardTitle className="flex items-center justify-between">
                   <div className='flex items-center gap-3'>
                     {task.icon ? (
-                      <img src={task.icon} alt={task.name} className="size-6 object-cover rounded-sm" />
+                      <img src={task.icon} alt={task.name} className="size-10 object-cover rounded-sm" />
                     ) : (
-                      <HelpCircle className="size-6 text-primary" />
+                      <HelpCircle className="size-10 text-primary" />
                     )}
                     <span className="font-headline">{task.name}</span>
                   </div>
