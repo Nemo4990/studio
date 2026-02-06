@@ -15,7 +15,7 @@ import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { collection, doc, serverTimestamp, runTransaction, Timestamp, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
 import type { Task, TaskSubmission } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -41,7 +41,6 @@ export default function TasksPage() {
   const [purchaseTask, setPurchaseTask] = useState<Task | null>(null);
   const [nebulaLedgerTask, setNebulaLedgerTask] = useState<Task | null>(null);
   const [orderedTasks, setOrderedTasks] = useState<ProcessedTask[]>([]);
-  const personalizationRan = useRef(false);
 
   // Fetch all tasks
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
@@ -96,6 +95,25 @@ export default function TasksPage() {
     setOrderedTasks(initialOrder);
 
   }, [processedTasks]);
+
+  const availableTasksCount = useMemo(() => {
+    return orderedTasks.filter(task => task.status === 'available').length;
+  }, [orderedTasks]);
+
+  const lockedTasksCount = useMemo(() => {
+    return orderedTasks.filter(task => task.status === 'locked').length;
+  }, [orderedTasks]);
+  
+  const pageDescription = useMemo(() => {
+    if (isLoading || !user) {
+      return "Complete tasks to earn crypto rewards and level up.";
+    }
+    let description = `Level ${user.level} | ${availableTasksCount} tasks available.`;
+    if (lockedTasksCount > 0) {
+      description += ` Keep leveling up to unlock more!`;
+    }
+    return description;
+  }, [isLoading, user, availableTasksCount, lockedTasksCount]);
 
 
   const handleGenericSubmit = (task: Task, proof?: string) => {
@@ -213,21 +231,19 @@ export default function TasksPage() {
 
   return (
     <>
-      <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
+      <PageHeader title="Tasks" description={pageDescription} />
 
       {quizTask && <QuizDialog isOpen={isQuizOpen} onClose={() => setIsQuizOpen(false)} onSubmitSuccess={() => handleGenericSubmit(quizTask, "Passed Crypto Beginner's Quiz")} />}
       {purchaseTask && user && <PurchaseTrialsDialog isOpen={!!purchaseTask} onClose={() => setPurchaseTask(null)} task={purchaseTask} user={user} />}
       {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward, message) => handleGenericSubmit({ ...nebulaLedgerTask, reward }, message)} />}
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Array.from({ length: 6 }).map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
             <Card key={i}><CardHeader><Skeleton className="h-6 w-3/4" /><Skeleton className="h-4 w-1/2" /></CardHeader><CardContent><Skeleton className="h-10 w-full" /></CardContent><CardFooter><Skeleton className="h-10 w-full" /></CardFooter></Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {orderedTasks.map((task) => (
+          ))
+        ) : orderedTasks.length > 0 ? (
+          orderedTasks.map((task) => (
             <Card key={task.id} className={cn('flex flex-col', task.status === 'locked' && 'bg-muted/50 border-dashed', task.status === 'completed' && 'bg-primary/5')}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
@@ -271,12 +287,11 @@ export default function TasksPage() {
                 )}
               </CardFooter>
             </Card>
-          ))}
-          {orderedTasks.length === 0 && (
-            <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">No tasks available at the moment. Check back later!</div>
-          )}
-        </div>
-      )}
+          ))
+        ) : (
+          <div className="text-center text-muted-foreground md:col-span-2 lg:col-span-3 py-10">No tasks available at the moment. Check back later!</div>
+        )}
+      </div>
     </>
   );
 }
