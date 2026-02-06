@@ -20,19 +20,23 @@ service cloud.firestore {
 
       // A user can update their own profile (e.g., name, phone number).
       // An admin can update any profile without restriction.
-      // CRITICAL: This rule prevents a user from directly changing their own `level`,
-      // `walletBalance`, or `role`, as per the architectural design.
-      // These fields must only be changed via server-side logic (transactions).
-      allow update: if (request.auth.uid == userId && !(
-                        'walletBalance' in request.resource.data &&
-                        request.resource.data.walletBalance != resource.data.walletBalance
-                      ) && !(
-                        'level' in request.resource.data &&
-                        request.resource.data.level != resource.data.level
-                      ) && !(
-                        'role' in request.resource.data &&
-                        request.resource.data.role != resource.data.role
-                      )) || isAppAdmin();
+      allow update: if (
+        // Admins can do anything
+        isAppAdmin()
+      ) || (
+        // Users can update their own profile, but with restrictions
+        request.auth.uid == userId && 
+        
+        // Prevent users from changing their own role
+        !('role' in request.resource.data && request.resource.data.role != resource.data.role) &&
+        
+        // Prevent users from changing their own level
+        !('level' in request.resource.data && request.resource.data.level != resource.data.level) &&
+        
+        // Prevent users from directly INCREASING their wallet balance.
+        // They are allowed to decrease it (for purchases like buying task trials).
+        !('walletBalance' in request.resource.data && request.resource.data.walletBalance > resource.data.walletBalance)
+      );
 
       // Deleting users is not allowed from the client.
       allow delete: if false;
