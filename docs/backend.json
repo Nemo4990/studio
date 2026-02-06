@@ -383,7 +383,7 @@
       "schema": {
         "$ref": "#/entities/Submission"
       },
-      "description": "Top-level collection of all task submissions from all users for admin review."
+      "description": "Top-level collection of all task submissions from all users for admin review. This is a denormalized copy."
     },
     "/deposits/{depositId}": {
       "schema": {
@@ -402,6 +402,12 @@
         "$ref": "#/entities/Testimonial"
       },
       "description": "Collection of testimonials created by a specific user, indexed by testimonialId."
+    },
+    "/users/{userId}/submissions/{submissionId}": {
+      "schema": {
+        "$ref": "#/entities/Submission"
+      },
+      "description": "Collection of submissions made by a specific user."
     },
     "/users/{userId}/deposits/{depositId}": {
         "schema": {

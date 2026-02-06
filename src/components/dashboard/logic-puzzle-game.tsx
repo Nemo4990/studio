@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { logicPuzzles, type Puzzle } from '@/lib/puzzle-data';
 import { Lightbulb, BrainCircuit, CheckCircle, XCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -61,11 +61,12 @@ export default function LogicPuzzleGame() {
     const taskTitle = 'Logic Puzzle Solving';
     const reward = 800;
 
-    const submissionsColRef = collection(firestore, 'submissions');
-    const submissionDocRef = doc(submissionsColRef);
+    const userSubmissionsRef = collection(firestore, 'users', user.id, 'submissions');
+    const newSubmissionRef = doc(userSubmissionsRef);
+    const topLevelSubmissionsRef = doc(firestore, 'submissions', newSubmissionRef.id);
 
     const submissionData = {
-      id: submissionDocRef.id,
+      id: newSubmissionRef.id,
       userId: user.id,
       taskId,
       submittedAt: serverTimestamp(),
@@ -76,14 +77,18 @@ export default function LogicPuzzleGame() {
       proof: `Solved puzzle: "${puzzle?.question}"`,
     };
 
-    setDoc(submissionDocRef, submissionData)
+    const batch = writeBatch(firestore);
+    batch.set(newSubmissionRef, submissionData);
+    batch.set(topLevelSubmissionsRef, submissionData);
+
+    batch.commit()
       .then(() => {
         toast({ title: 'Challenge Complete!', description: 'Your submission is pending review.' });
         setGameState('not-started');
       })
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
-          path: submissionDocRef.path,
+          path: newSubmissionRef.path,
           operation: 'create',
           requestResourceData: submissionData,
         });

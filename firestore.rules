@@ -57,6 +57,16 @@ service cloud.firestore {
         allow update: if isAppAdmin();
     }
 
+    match /users/{userId}/submissions/{submissionId} {
+        // Users can create their own submissions.
+        allow create: if request.auth.uid == userId;
+        // Users can read their own submissions, admins can read any.
+        allow get, list: if request.auth.uid == userId || isAppAdmin();
+        // Only admins can update/delete from the user's private record, which should be rare.
+        // The master record is in the top-level collection.
+        allow update, delete: if isAppAdmin();
+    }
+
     // --- Top-level Collections ---
 
     match /tasks/{taskId} {
@@ -67,12 +77,10 @@ service cloud.firestore {
     }
 
     match /submissions/{submissionId} {
-      // A user can create their own submission.
+      // A user can create their own submission record in the top-level collection.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      // An admin can read any submission. A user can only read their own.
-      allow read: if isAppAdmin() || (request.auth != null && resource.data.userId == request.auth.uid);
-      // Only admins can approve/reject (update) or delete submissions.
-      allow update, delete: if isAppAdmin();
+      // ONLY Admins can read, update, or delete from the top-level collection.
+      allow read, update, delete: if isAppAdmin();
     }
     
     match /deposits/{depositId} {

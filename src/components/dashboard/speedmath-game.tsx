@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 
 const TOTAL_QUESTIONS = 10;
 const TIME_PER_QUESTION = 5; // seconds
@@ -119,30 +119,35 @@ export default function SpeedmathGame() {
     const taskId = '11'; // Speedmath Challenge task ID
     const taskTitle = 'Speedmath Challenge';
     const reward = 500;
-
-    const submissionsColRef = collection(firestore, 'submissions');
-    const submissionDocRef = doc(submissionsColRef);
+    
+    const userSubmissionsRef = collection(firestore, 'users', user.id, 'submissions');
+    const newSubmissionRef = doc(userSubmissionsRef);
+    const topLevelSubmissionsRef = doc(firestore, 'submissions', newSubmissionRef.id);
 
     const submissionData = {
-      id: submissionDocRef.id,
+      id: newSubmissionRef.id,
       userId: user.id,
       taskId,
       submittedAt: serverTimestamp(),
-      status: 'pending',
+      status: 'pending' as const,
       taskTitle,
       reward,
       user: { name: user.name, email: user.email, avatarUrl: user.avatarUrl },
       proof: `Score: ${score}/${TOTAL_QUESTIONS} (${scorePercentage.toFixed(0)}%)`,
     };
 
-    setDoc(submissionDocRef, submissionData)
+    const batch = writeBatch(firestore);
+    batch.set(newSubmissionRef, submissionData);
+    batch.set(topLevelSubmissionsRef, submissionData);
+
+    batch.commit()
       .then(() => {
         toast({ title: 'Challenge Complete!', description: 'Your submission is pending review.' });
         setGameState('not-started'); // Reset game
       })
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
-          path: submissionDocRef.path,
+          path: newSubmissionRef.path,
           operation: 'create',
           requestResourceData: submissionData,
         });

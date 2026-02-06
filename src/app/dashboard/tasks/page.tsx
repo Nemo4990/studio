@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Check, Lock, Sparkles, RefreshCw } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
-import { collection, doc, setDoc, serverTimestamp, runTransaction, Timestamp, query, where } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, runTransaction, Timestamp, query, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { QuizDialog } from '@/components/dashboard/quiz-dialog';
@@ -49,9 +49,9 @@ export default function TasksPage() {
   const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
-  // Fetch user's submissions
+  // Fetch user's submissions from their private subcollection
   const submissionsQuery = useMemoFirebase(
-    () => (firestore && user) ? query(collection(firestore, 'submissions'), where('userId', '==', user.id)) : null,
+    () => (firestore && user) ? collection(firestore, 'users', user.id, 'submissions') : null,
     [firestore, user]
   );
   const { data: userSubmissions, isLoading: submissionsLoading } = useCollection<TaskSubmission>(submissionsQuery);
@@ -158,12 +158,15 @@ export default function TasksPage() {
 
   }, [tasks, user, userSubmissions, isLoading, personalizedTaskOrder]);
   
-  const handleGenericSubmit = (task: Task) => {
+  const handleGenericSubmit = (task: Task, proof?: string) => {
     if (!user || !firestore) return;
     
-    const submissionDocRef = doc(collection(firestore, 'submissions'));
+    const userSubmissionsRef = collection(firestore, 'users', user.id, 'submissions');
+    const newSubmissionRef = doc(userSubmissionsRef);
+    const topLevelSubmissionsRef = doc(firestore, 'submissions', newSubmissionRef.id);
+
     const submissionData = {
-      id: submissionDocRef.id,
+      id: newSubmissionRef.id,
       userId: user.id,
       taskId: task.id,
       submittedAt: serverTimestamp(),
@@ -171,14 +174,18 @@ export default function TasksPage() {
       taskTitle: task.name,
       reward: task.reward,
       user: { name: user.name || '', email: user.email || '', avatarUrl: user.avatarUrl || '' },
-      proof: `https://example.com/proof-for-${task.id}.pdf`,
+      proof: proof || `Submitted proof for ${task.name}`,
     };
 
-    setDoc(submissionDocRef, submissionData)
+    const batch = writeBatch(firestore);
+    batch.set(newSubmissionRef, submissionData);
+    batch.set(topLevelSubmissionsRef, submissionData);
+
+    batch.commit()
       .then(() => toast({ title: 'Task Submitted!', description: `Your submission for "${task.name}" is pending review.` }))
       .catch((serverError) => {
         const permissionError = new FirestorePermissionError({
-          path: submissionDocRef.path,
+          path: newSubmissionRef.path,
           operation: 'create',
           requestResourceData: submissionData,
         });
@@ -191,15 +198,17 @@ export default function TasksPage() {
     if (!user || !firestore || task.isDisabled) return;
 
     const userRef = doc(firestore, 'users', user.id);
-    const submissionRef = doc(collection(firestore, 'submissions'));
-
+    
     try {
       await runTransaction(firestore, async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists()) throw new Error("User document does not exist!");
 
+        const userSubmissionRef = doc(collection(firestore, 'users', user.id, 'submissions'));
+        const topLevelSubmissionRef = doc(firestore, 'submissions', userSubmissionRef.id);
+
         const submissionData = {
-          id: submissionRef.id,
+          id: userSubmissionRef.id,
           userId: user.id,
           taskId: task.id,
           submittedAt: serverTimestamp(),
@@ -210,7 +219,8 @@ export default function TasksPage() {
           proof: `Daily check-in for ${new Date().toISOString()}`,
         };
         
-        transaction.set(submissionRef, submissionData);
+        transaction.set(userSubmissionRef, submissionData);
+        transaction.set(topLevelSubmissionRef, submissionData);
         transaction.update(userRef, { lastDailyCheckin: serverTimestamp() });
       });
 
@@ -267,9 +277,9 @@ export default function TasksPage() {
     <>
       <PageHeader title="Tasks" description="Complete tasks to earn crypto rewards and level up." />
 
-      {quizTask && <QuizDialog isOpen={isQuizOpen} onClose={() => setIsQuizOpen(false)} onSubmitSuccess={() => handleGenericSubmit(quizTask)} />}
+      {quizTask && <QuizDialog isOpen={isQuizOpen} onClose={() => setIsQuizOpen(false)} onSubmitSuccess={() => handleGenericSubmit(quizTask, "Passed Crypto Beginner's Quiz")} />}
       {purchaseTask && user && <PurchaseTrialsDialog isOpen={!!purchaseTask} onClose={() => setPurchaseTask(null)} task={purchaseTask} user={user} />}
-      {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward) => handleGenericSubmit({ ...nebulaLedgerTask, reward })} />}
+      {nebulaLedgerTask && <NebulaLedgerDialog isOpen={!!nebulaLedgerTask} onClose={() => setNebulaLedgerTask(null)} task={nebulaLedgerTask} onSubmitSuccess={(reward, message) => handleGenericSubmit({ ...nebulaLedgerTask, reward }, message)} />}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {processedTasks.map((task) => (

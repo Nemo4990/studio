@@ -61,7 +61,7 @@ export function QuizDialog({ isOpen, onClose, onSubmitSuccess }: QuizDialogProps
     setScore(finalScore);
     setShowResults(true);
 
-    if (finalScore === 100) {
+    if (finalScore >= 80) {
       toast({
         title: 'Quiz Passed!',
         description: 'Submitting task for approval.',
@@ -128,7 +128,7 @@ export function QuizDialog({ isOpen, onClose, onSubmitSuccess }: QuizDialogProps
         <DialogFooter>
           {showResults ? (
              <div className="w-full flex justify-center items-center gap-2">
-                {score === 100 ? (
+                {score >= 80 ? (
                     <CheckCircle className="size-6 text-green-500"/>
                 ) : (
                     <XCircle className="size-6 text-red-500"/>
