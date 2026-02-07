@@ -32,8 +32,10 @@ import {
   setDoc,
   deleteDoc,
   updateDoc,
+  getDocs,
+  writeBatch,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Coins, Trash2, HelpCircle } from 'lucide-react';
 import React, { useState } from 'react';
 import type { Agent, PlatformSettings } from '@/lib/types';
 import {
@@ -50,7 +52,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -64,6 +77,9 @@ import {
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 // Zod Schema for Crypto Settings
 const settingsSchema = z.object({
@@ -104,6 +120,7 @@ function CryptoWalletManager() {
     }
 
     toast({ title: 'Saving settings...' });
+    // Include the 'id' field to match the schema requirements
     setDoc(settingsDocRef, { id: 'platform', ...values }, { merge: true })
       .then(() => {
         toast({ title: 'Crypto wallet saved successfully!' });
