@@ -31,7 +31,7 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
-  errorEmitter, 
+  errorEmitter,
   FirestorePermissionError,
   useAuth,
 } from '@/firebase';
@@ -43,12 +43,18 @@ import {
   query,
   orderBy,
   Timestamp,
-  where,
   writeBatch,
 } from 'firebase/firestore';
 import { sendEmailVerification } from 'firebase/auth';
 import Link from 'next/link';
 import { WalletActivity } from '@/components/dashboard/wallet-activity';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
 const USD_TO_NGN_RATE = 1500;
@@ -65,7 +71,6 @@ export default function WalletPage() {
   const [depositProofFile, setDepositProofFile] = useState<File | null>(null);
   const depositProofInputRef = useRef<HTMLInputElement>(null);
 
-
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
@@ -75,16 +80,30 @@ export default function WalletPage() {
   const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   // Fetch agents from Firestore
-  const agentsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'agents') : null, [firestore]);
-  const { data: agents, isLoading: agentsLoading } = useCollection<Agent>(agentsQuery);
+  const agentsQuery = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'agents') : null),
+    [firestore]
+  );
+  const { data: agents, isLoading: agentsLoading } =
+    useCollection<Agent>(agentsQuery);
 
   const filteredAgents = useMemo(() => {
     if (!user?.country || !agents) {
-        return [];
+      return [];
     }
     return agents.filter((agent) => agent.country === user.country);
   }, [agents, user?.country]);
 
+  const uniqueBankNames = useMemo(() => {
+    if (!user?.country || !agents) {
+      return [];
+    }
+    const countryAgents = agents.filter(
+      (agent) => agent.country === user.country
+    );
+    const bankNames = countryAgents.map((agent) => agent.bankName);
+    return [...new Set(bankNames)].sort();
+  }, [agents, user?.country]);
 
   const getCurrencyForCountry = (country: string) => {
     if (country === 'Nigeria') return 'NGN';
@@ -97,16 +116,15 @@ export default function WalletPage() {
     if (currency === 'ETB') return USD_TO_ETB_RATE;
     return 1; // for USD
   };
-  
+
   const localCurrency = user ? getCurrencyForCountry(user.country || '') : 'USD';
   const localRate = getUsdToLocalRate(localCurrency);
-  
+
   const userBalanceInUSD = (user?.walletBalance || 0) * COIN_TO_USD_RATE;
   const userBalanceInLocalCurrency = userBalanceInUSD * localRate;
-  
+
   const maxWithdrawalInUSD = user ? (user.level || 1) * 100 : 0;
   const maxWithdrawalAmountInLocal = maxWithdrawalInUSD * localRate;
-
 
   // Query user-specific sub-collections for their history
   const depositsQuery = useMemoFirebase(
@@ -143,7 +161,13 @@ export default function WalletPage() {
   };
 
   const handleDepositSubmit = () => {
-    if (!user || !user.country || !firestore || !selectedAgent || !depositAmount) {
+    if (
+      !user ||
+      !user.country ||
+      !firestore ||
+      !selectedAgent ||
+      !depositAmount
+    ) {
       toast({
         variant: 'destructive',
         title: 'Missing Information',
@@ -151,7 +175,7 @@ export default function WalletPage() {
       });
       return;
     }
-     if (!depositProofFile) {
+    if (!depositProofFile) {
       toast({
         variant: 'destructive',
         title: 'Missing Proof',
@@ -171,17 +195,22 @@ export default function WalletPage() {
       setLoading(false);
       return;
     }
-    
+
     const reader = new FileReader();
     reader.readAsDataURL(depositProofFile);
 
     reader.onload = () => {
       const proofOfPaymentUrl = reader.result as string;
 
-      const userDepositRef = doc(collection(firestore, 'users', user.id, 'deposits'));
-      const topLevelDepositRef = doc(collection(firestore, 'deposits'), userDepositRef.id);
+      const userDepositRef = doc(
+        collection(firestore, 'users', user.id, 'deposits')
+      );
+      const topLevelDepositRef = doc(
+        collection(firestore, 'deposits'),
+        userDepositRef.id
+      );
 
-      const depositData: Omit<Deposit, 'proofOfPayment'> & { proofOfPayment: string } = {
+      const depositData: Deposit = {
         id: userDepositRef.id,
         userId: user.id,
         agentId: selectedAgent.id,
@@ -198,37 +227,42 @@ export default function WalletPage() {
       };
 
       const { proofOfPayment, ...publicDepositData } = depositData;
-      
+
       const batch = writeBatch(firestore);
       batch.set(userDepositRef, depositData);
       batch.set(topLevelDepositRef, publicDepositData);
-      
-      batch.commit().then(() => {
-        toast({
-          title: 'Deposit Request Submitted!',
-          description: 'Your request is pending admin approval.',
-        });
-        setDepositAmount('');
-        setSelectedAgent(null);
-        setDepositProofFile(null);
-        if (depositProofInputRef.current) {
-          depositProofInputRef.current.value = '';
-        }
-      }).catch((error) => {
-         const permissionError = new FirestorePermissionError({
+
+      batch
+        .commit()
+        .then(() => {
+          toast({
+            title: 'Deposit Request Submitted!',
+            description: 'Your request is pending admin approval.',
+          });
+          setDepositAmount('');
+          setSelectedAgent(null);
+          setDepositProofFile(null);
+          if (depositProofInputRef.current) {
+            depositProofInputRef.current.value = '';
+          }
+        })
+        .catch((error) => {
+          const permissionError = new FirestorePermissionError({
             path: topLevelDepositRef.path,
             operation: 'create',
             requestResourceData: publicDepositData,
-         });
-         errorEmitter.emit('permission-error', permissionError);
-         toast({
-          variant: 'destructive',
-          title: 'Submission Failed',
-          description: 'There was a problem submitting your request. Please check permissions.',
+          });
+          errorEmitter.emit('permission-error', permissionError);
+          toast({
+            variant: 'destructive',
+            title: 'Submission Failed',
+            description:
+              'There was a problem submitting your request. Please check permissions.',
+          });
+        })
+        .finally(() => {
+          setLoading(false);
         });
-      }).finally(() => {
-        setLoading(false);
-      });
     };
 
     reader.onerror = (error) => {
@@ -236,19 +270,35 @@ export default function WalletPage() {
       toast({
         variant: 'destructive',
         title: 'File Read Error',
-        description: 'There was a problem reading your file. Please try another.',
+        description:
+          'There was a problem reading your file. Please try another.',
       });
       setLoading(false);
     };
   };
 
   const handleWithdrawalSubmit = () => {
-    if (!user || !firestore || !withdrawalAmount || !bankName || !accountNumber || !accountName) {
-      toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.' });
+    if (
+      !user ||
+      !firestore ||
+      !withdrawalAmount ||
+      !bankName ||
+      !accountNumber ||
+      !accountName
+    ) {
+      toast({
+        variant: 'destructive',
+        title: 'Missing Information',
+        description: 'Please fill out all fields.',
+      });
       return;
     }
     if (!user.emailVerified) {
-      toast({ variant: 'destructive', title: 'Email Not Verified', description: 'Please verify your email before withdrawing.' });
+      toast({
+        variant: 'destructive',
+        title: 'Email Not Verified',
+        description: 'Please verify your email before withdrawing.',
+      });
       return;
     }
     setLoading(true);
@@ -270,8 +320,13 @@ export default function WalletPage() {
       return;
     }
 
-    const userWithdrawalRef = doc(collection(firestore, 'users', user.id, 'withdrawals'));
-    const topLevelWithdrawalRef = doc(collection(firestore, 'withdrawals'), userWithdrawalRef.id);
+    const userWithdrawalRef = doc(
+      collection(firestore, 'users', user.id, 'withdrawals')
+    );
+    const topLevelWithdrawalRef = doc(
+      collection(firestore, 'withdrawals'),
+      userWithdrawalRef.id
+    );
 
     const withdrawalData: Withdrawal = {
       id: userWithdrawalRef.id,
@@ -292,31 +347,36 @@ export default function WalletPage() {
     const batch = writeBatch(firestore);
     batch.set(userWithdrawalRef, withdrawalData);
     batch.set(topLevelWithdrawalRef, publicWithdrawalData);
-    
-    batch.commit().then(() => {
-      toast({
-        title: 'Withdrawal Request Submitted!',
-        description: 'Your request is pending admin approval.',
-      });
-      setWithdrawalAmount('');
-      setBankName('');
-      setAccountNumber('');
-      setAccountName('');
-    }).catch((error) => {
-      const permissionError = new FirestorePermissionError({
+
+    batch
+      .commit()
+      .then(() => {
+        toast({
+          title: 'Withdrawal Request Submitted!',
+          description: 'Your request is pending admin approval.',
+        });
+        setWithdrawalAmount('');
+        setBankName('');
+        setAccountNumber('');
+        setAccountName('');
+      })
+      .catch((error) => {
+        const permissionError = new FirestorePermissionError({
           path: topLevelWithdrawalRef.path,
           operation: 'create',
           requestResourceData: publicWithdrawalData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          variant: 'destructive',
+          title: 'Submission Failed',
+          description:
+            'There was a problem submitting your request. Please check permissions.',
+        });
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      errorEmitter.emit('permission-error', permissionError);
-      toast({
-        variant: 'destructive',
-        title: 'Submission Failed',
-        description: 'There was a problem submitting your request. Please check permissions.',
-      });
-    }).finally(() => {
-      setLoading(false);
-    });
   };
 
   const handleSendVerificationEmail = async () => {
@@ -339,7 +399,6 @@ export default function WalletPage() {
     }
   };
 
-
   return (
     <>
       <PageHeader
@@ -359,24 +418,33 @@ export default function WalletPage() {
                 <CardHeader>
                   <CardTitle className="font-headline">Make a Deposit</CardTitle>
                   <CardDescription>
-                    Making a deposit increases your user level, unlocking access to more rewarding tasks. Your wallet balance (Coins) is earned from completing tasks.
+                    Making a deposit increases your user level, unlocking access
+                    to more rewarding tasks. Your wallet balance (Coins) is
+                    earned from completing tasks.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {user && !user.country ? (
                     <Card className="border-dashed border-2 p-6 text-center bg-secondary">
-                        <CardTitle className="text-xl font-headline">Please Set Your Country</CardTitle>
-                        <CardDescription className="mt-2">To see available deposit agents, please add your country to your profile.</CardDescription>
-                        <Button asChild className="mt-4">
-                            <Link href="/dashboard/settings">Go to Settings</Link>
-                        </Button>
+                      <CardTitle className="text-xl font-headline">
+                        Please Set Your Country
+                      </CardTitle>
+                      <CardDescription className="mt-2">
+                        To see available deposit agents, please add your country
+                        to your profile.
+                      </CardDescription>
+                      <Button asChild className="mt-4">
+                        <Link href="/dashboard/settings">Go to Settings</Link>
+                      </Button>
                     </Card>
                   ) : (
                     <>
                       {agentsLoading && <p>Loading agents...</p>}
                       {!agentsLoading && user?.country && (
                         <div>
-                          <Label className="text-muted-foreground">Showing agents for:</Label>
+                          <Label className="text-muted-foreground">
+                            Showing agents for:
+                          </Label>
                           <p className="font-bold text-lg">{user.country}</p>
                         </div>
                       )}
@@ -399,7 +467,9 @@ export default function WalletPage() {
                                   <CardTitle className="flex items-center gap-2 text-lg">
                                     <Banknote className="size-5" /> {agent.name}
                                   </CardTitle>
-                                  <CardDescription>{agent.country}</CardDescription>
+                                  <CardDescription>
+                                    {agent.country}
+                                  </CardDescription>
                                 </CardHeader>
                               </Card>
                             ))}
@@ -407,25 +477,34 @@ export default function WalletPage() {
                         </div>
                       )}
 
-                      {!agentsLoading && user?.country && filteredAgents.length === 0 && (
-                        <div className="text-center text-muted-foreground p-4 border rounded-lg">
-                          <p>No deposit agents are currently available for {user.country}.</p>
-                        </div>
-                      )}
-                      
+                      {!agentsLoading &&
+                        user?.country &&
+                        filteredAgents.length === 0 && (
+                          <div className="text-center text-muted-foreground p-4 border rounded-lg">
+                            <p>
+                              No deposit agents are currently available for{' '}
+                              {user.country}.
+                            </p>
+                          </div>
+                        )}
+
                       {selectedAgent && (
                         <Card className="bg-secondary">
                           <CardHeader>
-                            <CardTitle>Deposit to {selectedAgent.name}</CardTitle>
+                            <CardTitle>
+                              Deposit to {selectedAgent.name}
+                            </CardTitle>
                             <CardDescription>
-                              Make your deposit to the account below and upload proof of
-                              payment.
+                              Make your deposit to the account below and upload
+                              proof of payment.
                             </CardDescription>
                           </CardHeader>
                           <CardContent className="space-y-4">
                             <div className="space-y-1">
                               <Label>Bank Name</Label>
-                              <p className="font-semibold">{selectedAgent.bankName}</p>
+                              <p className="font-semibold">
+                                {selectedAgent.bankName}
+                              </p>
                             </div>
                             <div className="space-y-1">
                               <Label>Account Number</Label>
@@ -446,25 +525,42 @@ export default function WalletPage() {
                               </div>
                             </div>
                             <div className="space-y-2">
-                              <Label htmlFor="deposit-amount">Amount ({getCurrencyForCountry(selectedAgent.country)})</Label>
+                              <Label htmlFor="deposit-amount">
+                                Amount (
+                                {getCurrencyForCountry(selectedAgent.country)})
+                              </Label>
                               <Input
                                 id="deposit-amount"
                                 type="number"
                                 placeholder="Enter amount"
                                 value={depositAmount}
-                                onChange={(e) => setDepositAmount(e.target.value)}
+                                onChange={(e) =>
+                                  setDepositAmount(e.target.value)
+                                }
                               />
                             </div>
                             <div className="space-y-2">
                               <Label htmlFor="proof">Proof of Payment</Label>
-                              <Input id="proof" type="file" accept="image/*" ref={depositProofInputRef} onChange={(e) => setDepositProofFile(e.target.files?.[0] || null)} />
+                              <Input
+                                id="proof"
+                                type="file"
+                                accept="image/*"
+                                ref={depositProofInputRef}
+                                onChange={(e) =>
+                                  setDepositProofFile(
+                                    e.target.files?.[0] || null
+                                  )
+                                }
+                              />
                             </div>
                             <Button
                               className="w-full"
                               onClick={handleDepositSubmit}
                               disabled={loading}
                             >
-                              {loading ? 'Submitting...' : 'Submit Deposit Request'}
+                              {loading
+                                ? 'Submitting...'
+                                : 'Submit Deposit Request'}
                             </Button>
                           </CardContent>
                         </Card>
@@ -481,16 +577,42 @@ export default function WalletPage() {
                     Request Withdrawal
                   </CardTitle>
                   <CardDescription>
-                    Convert your Coins to local currency. Your maximum withdrawal amount is based on your current level.
+                    Convert your Coins to local currency. Your maximum
+                    withdrawal amount is based on your current level.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {user && !user.emailVerified ? (
+                  {user && !user.country ? (
+                    <Card className="border-dashed border-2 p-6 text-center bg-secondary">
+                      <CardTitle className="text-xl font-headline">
+                        Please Set Your Country
+                      </CardTitle>
+                      <CardDescription className="mt-2">
+                        To make a withdrawal, please add your country to your
+                        profile.
+                      </CardDescription>
+                      <Button asChild className="mt-4">
+                        <Link href="/dashboard/settings">Go to Settings</Link>
+                      </Button>
+                    </Card>
+                  ) : user && !user.emailVerified ? (
                     <Card className="border-dashed border-2 p-6 text-center bg-destructive/10 border-destructive/20">
-                      <CardTitle className="text-xl font-headline text-destructive">Email Verification Required</CardTitle>
-                      <CardDescription className="mt-2 text-destructive/80">You must verify your email address before you can request a withdrawal. Please check your inbox for a verification link.</CardDescription>
-                      <Button className="mt-4" onClick={handleSendVerificationEmail} disabled={isSendingVerification}>
-                          {isSendingVerification ? 'Sending...' : 'Resend Verification Email'}
+                      <CardTitle className="text-xl font-headline text-destructive">
+                        Email Verification Required
+                      </CardTitle>
+                      <CardDescription className="mt-2 text-destructive/80">
+                        You must verify your email address before you can request
+                        a withdrawal. Please check your inbox for a verification
+                        link.
+                      </CardDescription>
+                      <Button
+                        className="mt-4"
+                        onClick={handleSendVerificationEmail}
+                        disabled={isSendingVerification}
+                      >
+                        {isSendingVerification
+                          ? 'Sending...'
+                          : 'Resend Verification Email'}
                       </Button>
                     </Card>
                   ) : (
@@ -503,9 +625,19 @@ export default function WalletPage() {
                             </p>
                             <p className="text-lg font-bold flex items-center gap-2">
                               <Coins className="size-5 text-amber-500" />
-                              {(user.walletBalance || 0).toLocaleString()} Coins
+                              {(user.walletBalance || 0).toLocaleString()}{' '}
+                              Coins
                               <span className="text-sm text-muted-foreground">
-                                ({userBalanceInLocalCurrency.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })})
+                                (
+                                {userBalanceInLocalCurrency.toLocaleString(
+                                  undefined,
+                                  {
+                                    style: 'currency',
+                                    currency: localCurrency,
+                                    minimumFractionDigits: 2,
+                                  }
+                                )}
+                                )
                               </span>
                             </p>
                           </div>
@@ -514,13 +646,22 @@ export default function WalletPage() {
                               Max Withdrawal
                             </p>
                             <p className="text-lg font-bold">
-                              {maxWithdrawalAmountInLocal.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })}
+                              {maxWithdrawalAmountInLocal.toLocaleString(
+                                undefined,
+                                {
+                                  style: 'currency',
+                                  currency: localCurrency,
+                                  minimumFractionDigits: 2,
+                                }
+                              )}
                             </p>
                           </div>
                         </div>
                       )}
                       <div className="space-y-2">
-                        <Label htmlFor="withdraw-amount">Amount ({localCurrency})</Label>
+                        <Label htmlFor="withdraw-amount">
+                          Amount ({localCurrency})
+                        </Label>
                         <Input
                           id="withdraw-amount"
                           type="number"
@@ -529,17 +670,33 @@ export default function WalletPage() {
                           onChange={(e) => setWithdrawalAmount(e.target.value)}
                         />
                         <p className="text-xs text-muted-foreground">
-                            Your balance will be converted from Coins to {localCurrency} upon withdrawal.
+                          Your balance will be converted from Coins to{' '}
+                          {localCurrency} upon withdrawal.
                         </p>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="bank-name">Bank Name</Label>
-                        <Input
-                          id="bank-name"
-                          placeholder="e.g., Chase Bank"
+                        <Select
                           value={bankName}
-                          onChange={(e) => setBankName(e.target.value)}
-                        />
+                          onValueChange={setBankName}
+                          disabled={uniqueBankNames.length === 0}
+                        >
+                          <SelectTrigger id="bank-name">
+                            <SelectValue placeholder="Select a bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {uniqueBankNames.map((name) => (
+                              <SelectItem key={name} value={name}>
+                                {name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {user?.country && uniqueBankNames.length === 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            No banks available for your country at this time.
+                          </p>
+                        )}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="account-number">Account Number</Label>
@@ -583,7 +740,9 @@ export default function WalletPage() {
                 </CardHeader>
                 <CardContent className="space-y-8">
                   {isLoadingHistory ? (
-                    <div className="h-24 text-center">Loading transaction history...</div>
+                    <div className="h-24 text-center">
+                      Loading transaction history...
+                    </div>
                   ) : (
                     <>
                       <div>
@@ -614,13 +773,18 @@ export default function WalletPage() {
                                           : 'secondary'
                                       }
                                       className={cn(
-                                        tx.status === 'confirmed' && 'bg-green-500/80'
+                                        tx.status === 'confirmed' &&
+                                          'bg-green-500/80'
                                       )}
                                     >
                                       {tx.status}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>{(tx.createdAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
+                                  <TableCell>
+                                    {(
+                                      tx.createdAt as unknown as Timestamp
+                                    )?.toDate().toLocaleDateString()}
+                                  </TableCell>
                                   <TableCell className="text-xs">
                                     {tx.agentName}
                                   </TableCell>
@@ -629,12 +793,16 @@ export default function WalletPage() {
                             </TableBody>
                           </Table>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-4">No deposits found.</p>
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No deposits found.
+                          </p>
                         )}
                       </div>
 
                       <div>
-                        <h3 className="mb-4 text-lg font-medium">Withdrawals</h3>
+                        <h3 className="mb-4 text-lg font-medium">
+                          Withdrawals
+                        </h3>
                         {withdrawals && withdrawals.length > 0 ? (
                           <Table>
                             <TableHeader>
@@ -661,13 +829,18 @@ export default function WalletPage() {
                                           : 'secondary'
                                       }
                                       className={cn(
-                                        tx.status === 'approved' && 'bg-green-500/80'
+                                        tx.status === 'approved' &&
+                                          'bg-green-500/80'
                                       )}
                                     >
                                       {tx.status}
                                     </Badge>
                                   </TableCell>
-                                  <TableCell>{(tx.requestedAt as unknown as Timestamp)?.toDate().toLocaleDateString()}</TableCell>
+                                  <TableCell>
+                                    {(
+                                      tx.requestedAt as unknown as Timestamp
+                                    )?.toDate().toLocaleDateString()}
+                                  </TableCell>
                                   <TableCell className="font-mono text-xs">
                                     {tx.userBankInfo.bankName} - ...
                                     {tx.userBankInfo.accountNumber.slice(-4)}
@@ -677,7 +850,9 @@ export default function WalletPage() {
                             </TableBody>
                           </Table>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-4">No withdrawals found.</p>
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            No withdrawals found.
+                          </p>
                         )}
                       </div>
                     </>
