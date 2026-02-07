@@ -1,0 +1,107 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- User Collection ---
+    match /users/{userId} {
+      // Admins can read any profile, users can read their own.
+      allow get: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.auth.uid == userId);
+      // Only admins can list all users.
+      allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // A user can create their own profile document.
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // Admins can update anything. Users can update their own profile but not critical fields.
+      allow update: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (
+        (request.auth != null && request.auth.uid == userId) &&
+        !('role' in request.resource.data && request.resource.data.role != resource.data.role) &&
+        !('level' in request.resource.data && request.resource.data.level != resource.data.level) &&
+        !('walletBalance' in request.resource.data && request.resource.data.walletBalance > resource.data.walletBalance)
+      );
+      // No one can delete user profiles.
+      allow delete: if false;
+
+      // --- User Subcollections ---
+    
+      match /testimonials/{testimonialId} {
+        // Admins can read any, users can read their own.
+        allow get: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.auth.uid == userId);
+        // ONLY ADMINS can list testimonials for a specific user.
+        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        // Only owners can manage their testimonials.
+        allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /deposits/{depositId} {
+        // Admins can read any, users can read their own.
+        allow get: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.auth.uid == userId);
+        // ONLY ADMINS can list deposits for a specific user.
+        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        // Only owners can create deposit requests.
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // Only admins can update (confirm/fail) a deposit.
+        allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      }
+
+      match /withdrawals/{withdrawalId} {
+        // Admins can read any, users can read their own.
+        allow get: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.auth.uid == userId);
+        // ONLY ADMINS can list withdrawals for a specific user.
+        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        // Only owners can create withdrawal requests.
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // Only admins can update (approve/reject) a withdrawal.
+        allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      }
+
+      match /submissions/{submissionId} {
+        // Admins can read any, users can read their own.
+        allow get: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.auth.uid == userId);
+        // ONLY ADMINS can list submissions for a specific user.
+        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        // Only owners can create submissions.
+        allow create: if request.auth != null && request.auth.uid == userId;
+        // Only admins can update or delete submissions in a user's subcollection.
+        allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      }
+    }
+    
+    // --- Top-level Collections ---
+
+    match /tasks/{taskId} {
+      // Any authenticated user can read tasks.
+      allow read: if request.auth != null;
+      // Only admins can write tasks.
+      allow write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+    }
+
+    match /submissions/{submissionId} {
+      // A user can create a submission in the top-level collection.
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Only admins can manage the top-level submissions collection.
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+    }
+    
+    match /deposits/{depositId} {
+      // A user can create a deposit request in the top-level collection.
+      allow create: if request.auth.uid == request.resource.data.userId;
+      // Only admins can manage the top-level deposits collection.
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+    }
+    
+    match /withdrawals/{withdrawalId} {
+      // A user can create a withdrawal request in the top-level collection.
+      allow create: if request.auth.uid == request.resource.data.userId;
+      // Only admins can manage the top-level withdrawals collection.
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+    }
+
+    match /agents/{agentId} {
+      // Any authenticated user can read agents.
+      allow read: if request.auth != null;
+      // Only admins can write agents.
+      allow write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+    }
+
+  }
+}
