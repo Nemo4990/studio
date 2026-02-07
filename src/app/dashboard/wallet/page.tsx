@@ -433,13 +433,19 @@ export default function WalletPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 order-2 lg:order-1">
           <Tabs defaultValue="crypto-deposit">
-            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 md:w-auto">
-              <TabsTrigger value="crypto-deposit">Crypto Deposit</TabsTrigger>
-              <TabsTrigger value="crypto-withdraw">Crypto Withdraw</TabsTrigger>
-              <TabsTrigger value="local-deposit">Local Deposit</TabsTrigger>
-              <TabsTrigger value="local-withdraw">Local Withdraw</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
+            <div className="flex flex-wrap items-center gap-2 mb-4">
+              <TabsList>
+                <TabsTrigger value="crypto-deposit">Crypto Deposit</TabsTrigger>
+                <TabsTrigger value="crypto-withdraw">Crypto Withdraw</TabsTrigger>
+              </TabsList>
+              <TabsList>
+                <TabsTrigger value="local-deposit">Local Deposit</TabsTrigger>
+                <TabsTrigger value="local-withdraw">Local Withdraw</TabsTrigger>
+              </TabsList>
+              <TabsList>
+                <TabsTrigger value="history">History</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="crypto-deposit">
                 <Card>
@@ -988,4 +994,5 @@ export default function WalletPage() {
     </>
   );
 }
+
 
