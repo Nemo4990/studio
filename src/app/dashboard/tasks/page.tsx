@@ -68,15 +68,24 @@ export default function TasksPage() {
     return tasks.map(task => {
         const isGameTask = GAME_TASK_IDS.includes(task.id);
         const hasBeenSubmitted = submittedTaskIds.has(task.id);
+        
+        // A non-game task is "completed" if it has been submitted.
         const isCompleted = !isGameTask && hasBeenSubmitted;
+        
         // Lock all tasks if user is level 0, otherwise lock based on required level.
         const isLocked = user.level < 1 || user.level < task.requiredLevel;
         const status = isCompleted ? 'completed' : isLocked ? 'locked' : 'available';
 
+        // Calculate trials for game tasks with daily reset
         let trialsLeft: number | undefined;
         if (isGameTask) {
-          const attempts = user.taskAttempts?.[task.id] ?? 0;
-          trialsLeft = 5 - attempts;
+          const attemptData = user.taskAttempts?.[task.id];
+          const todayStr = new Date().toDateString();
+          let trialsUsedToday = 0;
+          if (attemptData && new Date(attemptData.date).toDateString() === todayStr) {
+            trialsUsedToday = attemptData.count;
+          }
+          trialsLeft = 5 - trialsUsedToday;
         }
         
         let isDisabled = false;
@@ -198,10 +207,35 @@ export default function TasksPage() {
   };
   
   const handleStartGameOrQuiz = (task: Task) => {
-    if (!user || !firestore || (task.trialsLeft ?? 0) <= 0) return;
-
+    if (!user || !firestore) return;
+    
     const userRef = doc(firestore, 'users', user.id);
-    const newAttempts = { ...user.taskAttempts, [task.id]: (user.taskAttempts?.[task.id] ?? 0) + 1 };
+
+    const attemptData = user.taskAttempts?.[task.id];
+    const todayStr = new Date().toDateString();
+    let currentCount = 0;
+
+    if (attemptData && new Date(attemptData.date).toDateString() === todayStr) {
+        currentCount = attemptData.count;
+    }
+
+    if (currentCount >= 5) {
+        toast({
+            variant: "destructive",
+            title: "No Trials Left",
+            description: "You have used all your free trials for today. Purchase more to continue.",
+        });
+        setPurchaseTask(task); // Open purchase dialog
+        return;
+    }
+
+    const newAttempts = {
+        ...user.taskAttempts,
+        [task.id]: {
+            count: currentCount + 1,
+            date: new Date().toISOString(),
+        },
+    };
 
     runTransaction(firestore, tx => {
         tx.update(userRef, { taskAttempts: newAttempts });
@@ -267,7 +301,7 @@ export default function TasksPage() {
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground">{task.description}</p>
                 {task.trialsLeft !== undefined && task.status === 'available' && (
-                  <p className="text-xs text-muted-foreground mt-2">Trials left: {Math.max(0, task.trialsLeft)}</p>
+                  <p className="text-xs text-muted-foreground mt-2">Daily trials left: {Math.max(0, task.trialsLeft)}</p>
                 )}
               </CardContent>
               <CardFooter>

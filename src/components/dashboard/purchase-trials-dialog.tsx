@@ -58,8 +58,8 @@ export function PurchaseTrialsDialog({ isOpen, onClose, task, user }: PurchaseTr
 
         const newBalance = currentBalance - PURCHASE_COST;
         const currentAttempts = userDoc.data().taskAttempts || {};
-        // Resetting attempts to 0 will give them 5 fresh trials
-        currentAttempts[task.id] = 0; 
+        // Resetting the attempt count to 0 gives the user 5 fresh trials for today.
+        currentAttempts[task.id] = { count: 0, date: new Date().toISOString() }; 
 
         transaction.update(userRef, {
           walletBalance: newBalance,

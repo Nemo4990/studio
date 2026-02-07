@@ -13,7 +13,8 @@ export type User = {
   phoneNumber?: string;
   country?: string;
   state?: string;
-  taskAttempts?: { [taskId: string]: number };
+  // This structure now supports daily trial resets for games.
+  taskAttempts?: { [taskId: string]: { count: number; date: string } };
 };
 
 export type Testimonial = {
