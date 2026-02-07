@@ -6,6 +6,7 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -22,6 +23,9 @@ import {
   useFirestore,
   useMemoFirebase,
   useUser,
+  useDoc,
+  errorEmitter,
+  FirestorePermissionError,
 } from '@/firebase';
 import {
   collection,
@@ -30,9 +34,9 @@ import {
   deleteDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import React, { useState } from 'react';
-import type { Agent } from '@/lib/types';
+import { MoreHorizontal, PlusCircle, Copy, Coins, Trash2, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import type { Agent, PlatformSettings } from '@/lib/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,16 +65,132 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
+// Zod Schema for Crypto Settings
+const settingsSchema = z.object({
+  cryptoDepositAddress: z.string().min(26, 'Please enter a valid crypto address'),
+});
+type SettingsFormValues = z.infer<typeof settingsSchema>;
+
+// Component to manage the global crypto wallet
+function CryptoWalletManager() {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const settingsDocRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'settings', 'platform') : null),
+    [firestore]
+  );
+  const { data: settings, isLoading: settingsLoading } = useDoc<PlatformSettings>(settingsDocRef);
+
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    defaultValues: {
+      cryptoDepositAddress: '',
+    },
+  });
+
+  useEffect(() => {
+    if (settings) {
+      form.reset({ cryptoDepositAddress: settings.cryptoDepositAddress });
+    }
+  }, [settings, form]);
+  
+  const onSubmit = async (values: SettingsFormValues) => {
+    if (!settingsDocRef) return;
+
+    toast({ title: 'Saving settings...' });
+    try {
+      await setDoc(settingsDocRef, { id: 'platform', ...values }, { merge: true });
+      toast({ title: 'Crypto wallet saved successfully!' });
+    } catch (error: any) {
+      const permissionError = new FirestorePermissionError({
+        path: settingsDocRef.path,
+        operation: 'write',
+        requestResourceData: values,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+      toast({
+        variant: 'destructive',
+        title: 'Save Failed',
+        description: 'You do not have permission to modify these settings.',
+      });
+    }
+  };
+  
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: 'Copied to clipboard!' });
+  };
+
+  return (
+    <Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardHeader>
+            <CardTitle className="font-headline">Crypto Deposit Wallet</CardTitle>
+            <CardDescription>
+              Set the primary crypto wallet address where all users will send their deposits.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {settingsLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <>
+              <FormField
+                control={form.control}
+                name="cryptoDepositAddress"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>USDT (TRC20) Deposit Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter the wallet address..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               {form.getValues('cryptoDepositAddress') && (
+                  <div className="flex flex-col sm:flex-row items-center gap-6 text-center p-4 rounded-lg bg-secondary">
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${form.getValues('cryptoDepositAddress')}&bgcolor=292d3e&color=ffffff&qzone=1`} alt="QR Code" width="160" height="160" />
+                       <div className='flex-1 text-left space-y-4'>
+                           <p className="text-sm text-muted-foreground">This address and QR code will be shown to all users on the wallet deposit page.</p>
+                           <div className="flex items-center gap-2">
+                              <Input readOnly value={form.getValues('cryptoDepositAddress')} className="font-mono bg-background" />
+                              <Button variant="ghost" size="icon" type="button" onClick={() => handleCopy(form.getValues('cryptoDepositAddress'))}>
+                                  <Copy />
+                              </Button>
+                          </div>
+                       </div>
+                  </div>
+              )}
+              </>
+            )}
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" disabled={form.formState.isSubmitting || settingsLoading}>
+              {form.formState.isSubmitting ? 'Saving...' : 'Save Crypto Wallet'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Form>
+    </Card>
+  );
+}
+
+
+// Zod Schema for Local Agents
 const agentSchema = z.object({
   name: z.string().min(2, 'Name is required'),
   country: z.string().min(2, 'Country is required'),
   bankName: z.string().min(2, 'Bank name is required'),
   accountNumber: z.string().min(10, 'Account number must be at least 10 digits'),
 });
-
 type AgentFormValues = z.infer<typeof agentSchema>;
 
+// Main Page Component
 export default function AdminAgentsPage() {
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
@@ -87,12 +207,7 @@ export default function AdminAgentsPage() {
 
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentSchema),
-    defaultValues: {
-      name: '',
-      country: '',
-      bankName: '',
-      accountNumber: '',
-    },
+    defaultValues: { name: '', country: '', bankName: '', accountNumber: '' },
   });
 
   const isLoading = userLoading || agentsLoading;
@@ -116,24 +231,34 @@ export default function AdminAgentsPage() {
   const onSubmit = async (values: AgentFormValues) => {
     if (!firestore) return;
 
-    if (editingAgent) {
-      // Update existing agent
-      const agentRef = doc(firestore, 'agents', editingAgent.id);
-      await updateDoc(agentRef, values);
-      toast({ title: 'Agent updated successfully' });
-    } else {
-      // Create new agent
-      const agentRef = doc(collection(firestore, 'agents'));
-      await setDoc(agentRef, { id: agentRef.id, ...values });
-      toast({ title: 'Agent created successfully' });
-    }
+    const action = editingAgent ? 'update' : 'create';
+    toast({ title: editingAgent ? 'Updating agent...' : 'Creating agent...' });
 
-    setIsDialogOpen(false);
-    setEditingAgent(null);
+    try {
+        if (editingAgent) {
+            await updateDoc(doc(firestore, 'agents', editingAgent.id), values);
+            toast({ title: 'Agent updated successfully' });
+        } else {
+            const agentRef = doc(collection(firestore, 'agents'));
+            await setDoc(agentRef, { id: agentRef.id, ...values });
+            toast({ title: 'Agent created successfully' });
+        }
+        setIsDialogOpen(false);
+        setEditingAgent(null);
+    } catch (error: any) {
+        const path = editingAgent ? `agents/${editingAgent.id}` : 'agents';
+        const permissionError = new FirestorePermissionError({
+            path,
+            operation: action,
+            requestResourceData: values,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: 'destructive', title: 'Action Failed', description: `Could not ${action} agent.` });
+    }
   };
 
-  if (isLoading) {
-    return <PageHeader title="Manage Agents" description="Loading..." />;
+  if (userLoading) {
+    return <PageHeader title="Agents & Wallets" description="Loading..." />;
   }
 
   if (user?.role !== 'admin') {
@@ -162,140 +287,104 @@ export default function AdminAgentsPage() {
   return (
     <>
       <PageHeader
-        title="Manage Agents"
-        description="Add, edit, or remove payment agents."
+        title="Agents & Wallets"
+        description="Manage local currency agents and the global crypto deposit wallet."
       >
         <Button onClick={() => handleOpenDialog()}>
           <PlusCircle className="mr-2" />
-          Create Agent
+          Create Local Agent
         </Button>
       </PageHeader>
-      <Card>
-        <CardHeader>
-          <CardTitle className="font-headline">All Agents</CardTitle>
-          <CardDescription>
-            A list of all payment agents in the system.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {agents && agents.length === 0 && !agentsLoading && (
-            <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">No agents found.</p>
-                <Button variant="link" onClick={seedDatabase}>Click here to add initial agents</Button>
-            </div>
-          )}
-          {agents && agents.length > 0 && (
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Bank</TableHead>
-                    <TableHead>Account Number</TableHead>
-                    <TableHead>
-                    <span className="sr-only">Actions</span>
-                    </TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {agents?.map((agent) => (
-                    <TableRow key={agent.id}>
-                    <TableCell>{agent.name}</TableCell>
-                    <TableCell>{agent.country}</TableCell>
-                    <TableCell>{agent.bankName}</TableCell>
-                    <TableCell>{agent.accountNumber}</TableCell>
-                    <TableCell>
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                            <MoreHorizontal />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleOpenDialog(agent)}>
-                            Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => handleDelete(agent.id)}
-                            >
-                            Delete
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    </TableRow>
-                ))}
-                </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      
+      <div className="space-y-8">
+        <CryptoWalletManager />
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline">Local Currency Agents</CardTitle>
+            <CardDescription>
+              A list of all local payment agents in the system.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <Skeleton className="h-40 w-full" /> : 
+             agents && agents.length === 0 ? (
+              <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                  <p className="text-muted-foreground">No local agents found.</p>
+                  <Button variant="link" onClick={seedDatabase}>Click here to add initial agents</Button>
+              </div>
+            ) : (
+              <Table>
+                  <TableHeader>
+                  <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Country</TableHead>
+                      <TableHead>Bank</TableHead>
+                      <TableHead>Account Number</TableHead>
+                      <TableHead><span className="sr-only">Actions</span></TableHead>
+                  </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                  {agents?.map((agent) => (
+                      <TableRow key={agent.id}>
+                      <TableCell>{agent.name}</TableCell>
+                      <TableCell>{agent.country}</TableCell>
+                      <TableCell>{agent.bankName}</TableCell>
+                      <TableCell>{agent.accountNumber}</TableCell>
+                      <TableCell>
+                          <DropdownMenu>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleOpenDialog(agent)}>Edit</DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(agent.id)}>Delete</DropdownMenuItem>
+                          </DropdownMenuContent>
+                          </DropdownMenu>
+                      </TableCell>
+                      </TableRow>
+                  ))}
+                  </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      </div>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {editingAgent ? 'Edit Agent' : 'Create New Agent'}
-            </DialogTitle>
-            <DialogDescription>
-              Fill in the details for the payment agent.
-            </DialogDescription>
+            <DialogTitle>{editingAgent ? 'Edit Agent' : 'Create New Agent'}</DialogTitle>
+            <DialogDescription>Fill in the details for the local payment agent.</DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Agent Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="country"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Country</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Nigeria" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="bankName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bank Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., GTBank" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="accountNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="0123456789" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <FormField control={form.control} name="name" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Agent Name</FormLabel>
+                  <FormControl><Input placeholder="John Doe" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="country" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl><Input placeholder="e.g., Nigeria" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="bankName" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Bank Name</FormLabel>
+                  <FormControl><Input placeholder="e.g., GTBank" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="accountNumber" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Account Number</FormLabel>
+                  <FormControl><Input placeholder="0123456789" {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
               <DialogFooter>
                 <Button type="submit" disabled={form.formState.isSubmitting}>
                   {form.formState.isSubmitting ? 'Saving...' : 'Save Agent'}

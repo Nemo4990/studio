@@ -87,14 +87,8 @@ export const adminNavItems: NavItem[] = [
   },
   {
     href: '/dashboard/admin/agents',
-    label: 'Manage Agents',
+    label: 'Agents & Wallets',
     icon: Briefcase,
-    role: 'admin',
-  },
-  {
-    href: '/dashboard/admin/settings',
-    label: 'Platform Settings',
-    icon: Settings,
     role: 'admin',
   },
 ];
