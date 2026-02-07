@@ -89,8 +89,8 @@ export default function WalletPage() {
 
   // Fetch agents from Firestore
   const agentsQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'agents') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'agents') : null),
+    [firestore, user]
   );
   const { data: agents, isLoading: agentsLoading } =
     useCollection<Agent>(agentsQuery);
@@ -433,18 +433,27 @@ export default function WalletPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 order-2 lg:order-1">
           <Tabs defaultValue="crypto-deposit">
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <TabsList>
-                <TabsTrigger value="crypto-deposit">Crypto Deposit</TabsTrigger>
-                <TabsTrigger value="crypto-withdraw">Crypto Withdraw</TabsTrigger>
-              </TabsList>
-              <TabsList>
-                <TabsTrigger value="local-deposit">Local Deposit</TabsTrigger>
-                <TabsTrigger value="local-withdraw">Local Withdraw</TabsTrigger>
-              </TabsList>
-              <TabsList>
-                <TabsTrigger value="history">History</TabsTrigger>
-              </TabsList>
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+               <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-muted-foreground mb-1">Crypto</span>
+                  <TabsList>
+                      <TabsTrigger value="crypto-deposit">Deposit</TabsTrigger>
+                      <TabsTrigger value="crypto-withdraw">Withdraw</TabsTrigger>
+                  </TabsList>
+               </div>
+               <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-muted-foreground mb-1">Local Currency</span>
+                  <TabsList>
+                      <TabsTrigger value="local-deposit">Deposit</TabsTrigger>
+                      <TabsTrigger value="local-withdraw">Withdraw</TabsTrigger>
+                  </TabsList>
+               </div>
+               <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-muted-foreground mb-1 invisible">History</span>
+                    <TabsList>
+                        <TabsTrigger value="history">History</TabsTrigger>
+                    </TabsList>
+               </div>
             </div>
 
             <TabsContent value="crypto-deposit">
@@ -994,5 +1003,6 @@ export default function WalletPage() {
     </>
   );
 }
+
 
 
