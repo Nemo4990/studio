@@ -4,6 +4,7 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  emailVerified: boolean;
   avatarUrl: string;
   role: 'user' | 'admin';
   level: number;

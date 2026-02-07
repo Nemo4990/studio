@@ -12,7 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -36,10 +36,19 @@ export function SignupForm() {
     createUserWithEmailAndPassword(auth, email, password)
       .then(userCredential => {
         const user = userCredential.user;
+        
+        sendEmailVerification(user).then(() => {
+          toast({
+            title: 'Verification email sent',
+            description: 'Please check your email to verify your account.',
+          });
+        });
+
         const userProfileData = {
             id: user.uid,
             name,
             email,
+            emailVerified: user.emailVerified,
             role: email === 'admin@taskverse.io' ? 'admin' : 'user',
             level: 0,
             walletBalance: 0,

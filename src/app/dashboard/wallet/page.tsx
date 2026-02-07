@@ -32,7 +32,8 @@ import {
   useCollection,
   useMemoFirebase,
   errorEmitter, 
-  FirestorePermissionError
+  FirestorePermissionError,
+  useAuth,
 } from '@/firebase';
 import {
   collection,
@@ -45,6 +46,7 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
+import { sendEmailVerification } from 'firebase/auth';
 import Link from 'next/link';
 import { WalletActivity } from '@/components/dashboard/wallet-activity';
 
@@ -56,6 +58,7 @@ export default function WalletPage() {
   const { toast } = useToast();
   const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
 
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
@@ -69,6 +72,7 @@ export default function WalletPage() {
   const [accountName, setAccountName] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
 
   // Fetch agents from Firestore
   const agentsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'agents') : null, [firestore]);
@@ -237,6 +241,10 @@ export default function WalletPage() {
       toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.' });
       return;
     }
+    if (!user.emailVerified) {
+      toast({ variant: 'destructive', title: 'Email Not Verified', description: 'Please verify your email before withdrawing.' });
+      return;
+    }
     setLoading(true);
 
     const amount = parseFloat(withdrawalAmount);
@@ -297,6 +305,26 @@ export default function WalletPage() {
     }).finally(() => {
       setLoading(false);
     });
+  };
+
+  const handleSendVerificationEmail = async () => {
+    if (!auth.currentUser) return;
+    setIsSendingVerification(true);
+    try {
+      await sendEmailVerification(auth.currentUser);
+      toast({
+        title: 'Verification Email Sent',
+        description: 'Please check your inbox and follow the instructions.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error Sending Email',
+        description: error.message || 'Could not send verification email.',
+      });
+    } finally {
+      setIsSendingVerification(false);
+    }
   };
 
 
@@ -445,77 +473,89 @@ export default function WalletPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {user && (
-                    <div className="flex justify-between rounded-lg border p-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          Available Balance
-                        </p>
-                        <p className="text-lg font-bold flex items-center gap-2">
-                          <Coins className="size-5 text-amber-500" />
-                          {(user.walletBalance || 0).toLocaleString()} Coins
-                          <span className="text-sm text-muted-foreground">
-                             ({userBalanceInLocalCurrency.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })})
-                          </span>
+                  {user && !user.emailVerified ? (
+                    <Card className="border-dashed border-2 p-6 text-center bg-destructive/10 border-destructive/20">
+                      <CardTitle className="text-xl font-headline text-destructive">Email Verification Required</CardTitle>
+                      <CardDescription className="mt-2 text-destructive/80">You must verify your email address before you can request a withdrawal. Please check your inbox for a verification link.</CardDescription>
+                      <Button className="mt-4" onClick={handleSendVerificationEmail} disabled={isSendingVerification}>
+                          {isSendingVerification ? 'Sending...' : 'Resend Verification Email'}
+                      </Button>
+                    </Card>
+                  ) : (
+                    <>
+                      {user && (
+                        <div className="flex justify-between rounded-lg border p-4">
+                          <div>
+                            <p className="text-sm text-muted-foreground">
+                              Available Balance
+                            </p>
+                            <p className="text-lg font-bold flex items-center gap-2">
+                              <Coins className="size-5 text-amber-500" />
+                              {(user.walletBalance || 0).toLocaleString()} Coins
+                              <span className="text-sm text-muted-foreground">
+                                ({userBalanceInLocalCurrency.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })})
+                              </span>
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">
+                              Max Withdrawal
+                            </p>
+                            <p className="text-lg font-bold">
+                              {maxWithdrawalAmountInLocal.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="withdraw-amount">Amount ({localCurrency})</Label>
+                        <Input
+                          id="withdraw-amount"
+                          type="number"
+                          placeholder="100.00"
+                          value={withdrawalAmount}
+                          onChange={(e) => setWithdrawalAmount(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Your balance will be converted from Coins to {localCurrency} upon withdrawal.
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">
-                          Max Withdrawal
-                        </p>
-                        <p className="text-lg font-bold">
-                          {maxWithdrawalAmountInLocal.toLocaleString(undefined, { style: 'currency', currency: localCurrency, minimumFractionDigits: 2 })}
-                        </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="bank-name">Bank Name</Label>
+                        <Input
+                          id="bank-name"
+                          placeholder="e.g., Chase Bank"
+                          value={bankName}
+                          onChange={(e) => setBankName(e.target.value)}
+                        />
                       </div>
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="account-number">Account Number</Label>
+                        <Input
+                          id="account-number"
+                          placeholder="Your account number"
+                          value={accountNumber}
+                          onChange={(e) => setAccountNumber(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="account-name">Account Name</Label>
+                        <Input
+                          id="account-name"
+                          placeholder="Name on the account"
+                          value={accountName}
+                          onChange={(e) => setAccountName(e.target.value)}
+                        />
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={handleWithdrawalSubmit}
+                        disabled={loading || !user}
+                      >
+                        {loading ? 'Submitting...' : 'Request Withdrawal'}
+                      </Button>
+                    </>
                   )}
-                  <div className="space-y-2">
-                    <Label htmlFor="withdraw-amount">Amount ({localCurrency})</Label>
-                    <Input
-                      id="withdraw-amount"
-                      type="number"
-                      placeholder="100.00"
-                      value={withdrawalAmount}
-                      onChange={(e) => setWithdrawalAmount(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                        Your balance will be converted from Coins to {localCurrency} upon withdrawal.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="bank-name">Bank Name</Label>
-                    <Input
-                      id="bank-name"
-                      placeholder="e.g., Chase Bank"
-                      value={bankName}
-                      onChange={(e) => setBankName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account-number">Account Number</Label>
-                    <Input
-                      id="account-number"
-                      placeholder="Your account number"
-                      value={accountNumber}
-                      onChange={(e) => setAccountNumber(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="account-name">Account Name</Label>
-                    <Input
-                      id="account-name"
-                      placeholder="Name on the account"
-                      value={accountName}
-                      onChange={(e) => setAccountName(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    className="w-full"
-                    onClick={handleWithdrawalSubmit}
-                    disabled={loading || !user}
-                  >
-                    {loading ? 'Submitting...' : 'Request Withdrawal'}
-                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

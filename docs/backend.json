@@ -16,6 +16,10 @@
           "description": "Email address of the user.",
           "format": "email"
         },
+        "emailVerified": {
+          "type": "boolean",
+          "description": "Whether the user's email address has been verified."
+        },
         "name": {
           "type": "string",
           "description": "Full name of the user."
@@ -56,6 +60,7 @@
       "required": [
         "id",
         "email",
+        "emailVerified",
         "name",
         "level",
         "walletBalance"

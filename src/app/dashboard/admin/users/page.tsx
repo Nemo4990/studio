@@ -74,7 +74,16 @@ function UserDetailsDialog({
           </Avatar>
           <div>
             <DialogTitle className="font-headline text-2xl">{user.name}</DialogTitle>
-            <DialogDescription>{user.email}</DialogDescription>
+            <DialogDescription className="flex items-center gap-2">
+              <span>{user.email}</span>
+              {user.emailVerified ? (
+                <Badge variant="default" className="bg-green-500/80">
+                  Verified
+                </Badge>
+              ) : (
+                <Badge variant="destructive">Unverified</Badge>
+              )}
+            </DialogDescription>
           </div>
         </DialogHeader>
         <div className="py-4 space-y-4">
