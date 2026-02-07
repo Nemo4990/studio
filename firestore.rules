@@ -45,19 +45,22 @@ service cloud.firestore {
     // --- User Subcollections ---
     
     match /users/{userId}/testimonials/{testimonialId} {
-      // Users can manage their own testimonials.
-      allow read, write: if request.auth.uid == userId;
+      // Users can write their own testimonials. Admins can read any.
+      allow get, list: if request.auth.uid == userId || isAppAdmin();
+      allow write: if request.auth.uid == userId;
     }
 
     match /users/{userId}/deposits/{depositId} {
-        // Users can create and read their own deposits. Admins can update them.
-        allow read, create: if request.auth.uid == userId;
+        // Users can create their own deposits. Admins can read any and update them.
+        allow get, list: if request.auth.uid == userId || isAppAdmin();
+        allow create: if request.auth.uid == userId;
         allow update: if isAppAdmin();
     }
 
     match /users/{userId}/withdrawals/{withdrawalId} {
-        // Users can create and read their own withdrawals. Admins can update them.
-        allow read, create: if request.auth.uid == userId;
+        // Users can create their own withdrawals. Admins can read any and update them.
+        allow get, list: if request.auth.uid == userId || isAppAdmin();
+        allow create: if request.auth.uid == userId;
         allow update: if isAppAdmin();
     }
 
