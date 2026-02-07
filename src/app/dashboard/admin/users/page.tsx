@@ -34,20 +34,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import type { User, TaskSubmission, Deposit, Withdrawal } from '@/lib/types';
-import { collection, Timestamp, query, orderBy, where } from 'firebase/firestore';
-import {
-  MoreHorizontal,
-  Coins,
-  CheckSquare,
-  ArrowDownToDot,
-  ArrowUpFromDot,
-} from 'lucide-react';
+import type { User } from '@/lib/types';
+import { collection, Timestamp } from 'firebase/firestore';
+import { MoreHorizontal, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import StatCard from '@/components/dashboard/stat-card';
 
 const toDate = (date: any): Date => {
   if (date instanceof Timestamp) {
@@ -70,65 +62,11 @@ function UserDetailsDialog({
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const firestore = useFirestore();
-
-  // Queries for user's activities from top-level collections, filtered by userId
-  const submissionsQuery = useMemoFirebase(
-    () =>
-      user
-        ? query(
-            collection(firestore, 'submissions'),
-            where('userId', '==', user.id),
-            orderBy('submittedAt', 'desc')
-          )
-        : null,
-    [firestore, user]
-  );
-  const { data: submissions, isLoading: submissionsLoading } =
-    useCollection<TaskSubmission>(submissionsQuery);
-
-  const depositsQuery = useMemoFirebase(
-    () =>
-      user
-        ? query(
-            collection(firestore, 'deposits'),
-            where('userId', '==', user.id),
-            orderBy('createdAt', 'desc')
-          )
-        : null,
-    [firestore, user]
-  );
-  const { data: deposits, isLoading: depositsLoading } =
-    useCollection<Deposit>(depositsQuery);
-
-  const withdrawalsQuery = useMemoFirebase(
-    () =>
-      user
-        ? query(
-            collection(firestore, 'withdrawals'),
-            where('userId', '==', user.id),
-            orderBy('requestedAt', 'desc')
-          )
-        : null,
-    [firestore, user]
-  );
-  const { data: withdrawals, isLoading: withdrawalsLoading } =
-    useCollection<Withdrawal>(withdrawalsQuery);
-  
-  const approvedSubmissions = useMemo(() => submissions?.filter(s => s.status === 'approved') || [], [submissions]);
-  const confirmedDeposits = useMemo(() => deposits?.filter(d => d.status === 'confirmed') || [], [deposits]);
-  const approvedWithdrawals = useMemo(() => withdrawals?.filter(w => w.status === 'approved') || [], [withdrawals]);
-  
-  const totalEarnings = useMemo(() => approvedSubmissions.reduce((acc, sub) => acc + sub.reward, 0), [approvedSubmissions]);
-
-
-  const isLoading = submissionsLoading || depositsLoading || withdrawalsLoading;
-
   if (!user) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader className="flex-row items-center gap-4">
           <Avatar className="h-14 w-14">
             <AvatarImage src={user.avatarUrl} alt={user.name} />
@@ -139,97 +77,36 @@ function UserDetailsDialog({
             <DialogDescription>{user.email}</DialogDescription>
           </div>
         </DialogHeader>
-        <div className="py-4">
-          <Tabs defaultValue="overview">
-            <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="submissions">Submissions</TabsTrigger>
-              <TabsTrigger value="deposits">Deposits</TabsTrigger>
-              <TabsTrigger value="withdrawals">Withdrawals</TabsTrigger>
-            </TabsList>
-            <TabsContent value="overview" className="mt-4">
-               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <StatCard title="Level" value={user.level} icon={Coins} />
-                    <StatCard title="Balance" value={`${user.walletBalance.toLocaleString()} Coins`} icon={Coins} />
-                    <StatCard title="Tasks Completed" value={approvedSubmissions.length} icon={CheckSquare} />
-                    <StatCard title="Total Earned" value={`${totalEarnings.toLocaleString()} Coins`} icon={Coins} />
-                    <StatCard title="Total Deposits" value={confirmedDeposits.length} icon={ArrowDownToDot} />
-                    <StatCard title="Total Withdrawals" value={approvedWithdrawals.length} icon={ArrowUpFromDot} />
-               </div>
-            </TabsContent>
-            <TabsContent value="submissions">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Task</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Reward</TableHead>
-                    <TableHead>Date</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {isLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
-                   ) : submissions?.map(sub => (
-                    <TableRow key={sub.id}>
-                      <TableCell>{sub.taskTitle}</TableCell>
-                      <TableCell><Badge variant={sub.status === 'approved' ? 'default' : sub.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(sub.status === 'approved' && 'bg-green-500/80')}>{sub.status}</Badge></TableCell>
-                      <TableCell>{sub.reward}</TableCell>
-                      <TableCell>{toDate(sub.submittedAt).toLocaleDateString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-            <TabsContent value="deposits">
-               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Agent</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {isLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
-                   ) : deposits?.map(dep => (
-                    <TableRow key={dep.id}>
-                      <TableCell>{dep.amount.toLocaleString()} {dep.currency}</TableCell>
-                      <TableCell><Badge variant={dep.status === 'confirmed' ? 'default' : dep.status === 'failed' ? 'destructive' : 'secondary'} className={cn(dep.status === 'confirmed' && 'bg-green-500/80')}>{dep.status}</Badge></TableCell>
-                      <TableCell>{toDate(dep.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{dep.agentName}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-            <TabsContent value="withdrawals">
-               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Bank</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                   {isLoading ? (
-                      <TableRow><TableCell colSpan={4} className="text-center">Loading...</TableCell></TableRow>
-                   ) : withdrawals?.map(wd => (
-                    <TableRow key={wd.id}>
-                      <TableCell>{wd.amount.toLocaleString()} {wd.currency}</TableCell>
-                      <TableCell><Badge variant={wd.status === 'approved' ? 'default' : wd.status === 'rejected' ? 'destructive' : 'secondary'} className={cn(wd.status === 'approved' && 'bg-green-500/80')}>{wd.status}</Badge></TableCell>
-                      <TableCell>{toDate(wd.requestedAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{wd.userBankInfo.bankName}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-          </Tabs>
+        <div className="py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Level</p>
+                    <p className="font-semibold">Level {user.level}</p>
+                </div>
+                 <div className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Role</p>
+                    <p className="font-semibold capitalize">{user.role}</p>
+                </div>
+            </div>
+             <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Wallet Balance</p>
+                <p className="font-semibold flex items-center gap-2">
+                  <Coins className="size-4 text-amber-500" /> 
+                  {user.walletBalance.toLocaleString()} Coins
+                </p>
+            </div>
+             <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Joined</p>
+                <p className="font-semibold">{toDate(user.createdAt).toLocaleDateString()}</p>
+            </div>
+             <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Contact</p>
+                <p className="font-semibold">{user.phoneNumber || 'Not provided'}</p>
+            </div>
+             <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Location</p>
+                <p className="font-semibold">{user.state && user.country ? `${user.state}, ${user.country}` : user.country || 'Not provided'}</p>
+            </div>
         </div>
       </DialogContent>
     </Dialog>
