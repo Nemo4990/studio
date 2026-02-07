@@ -1,22 +1,46 @@
 'use client';
 
+import React, { useMemo } from 'react';
 import PageHeader from '@/components/dashboard/page-header';
 import StatCard from '@/components/dashboard/stat-card';
 import { BarChart, CheckCircle2, Star, Coins, Wallet, CheckSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
+import { collection, query, where } from 'firebase/firestore';
+import type { TaskSubmission } from '@/lib/types';
 
 export default function UserDashboardPage() {
-    const { user, loading } = useUser();
+    const { user, loading: userLoading } = useUser();
+    const firestore = useFirestore();
+
+    // Query for approved submissions to calculate stats
+    const approvedSubmissionsQuery = useMemoFirebase(
+        () => 
+          (firestore && user?.id) 
+            ? query(collection(firestore, 'users', user.id, 'submissions'), where('status', '==', 'approved')) 
+            : null,
+        [firestore, user?.id]
+    );
+
+    const { data: approvedSubmissions, isLoading: submissionsLoading } = useCollection<TaskSubmission>(approvedSubmissionsQuery);
+
+    const tasksCompleted = useMemo(() => approvedSubmissions?.length || 0, [approvedSubmissions]);
+    
+    const totalEarnings = useMemo(() => {
+        if (!approvedSubmissions) return 0;
+        return approvedSubmissions.reduce((acc, sub) => acc + (sub.reward || 0), 0);
+    }, [approvedSubmissions]);
+
+    const isLoading = userLoading || submissionsLoading;
 
   return (
     <>
-      <PageHeader title="Dashboard" description={loading || !user ? "Welcome back! Here's a summary of your account." : `Welcome back, ${user.name}! Here's a summary of your account.`} />
+      <PageHeader title="Dashboard" description={isLoading || !user ? "Welcome back! Here's a summary of your account." : `Welcome back, ${user.name}! Here's a summary of your account.`} />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {loading || !user ? (
+        {isLoading || !user ? (
             <>
                 <StatCard title="Current Level" value={<Skeleton className="h-6 w-20 mt-1" />} icon={Star} description="Complete tasks to level up" />
                 <StatCard title="Wallet Balance" value={<Skeleton className="h-6 w-24 mt-1" />} icon={Coins} description="Available for withdrawal" />
@@ -27,8 +51,8 @@ export default function UserDashboardPage() {
             <>
                 <StatCard title="Current Level" value={`Level ${user.level}`} icon={Star} description="Complete tasks to level up" className="card-glow" />
                 <StatCard title="Wallet Balance" value={`${user.walletBalance.toLocaleString()} Coins`} icon={Coins} description="Available for withdrawal" className="card-glow" />
-                <StatCard title="Tasks Completed" value={0} icon={CheckCircle2} description="Keep up the great work!" className="card-glow" />
-                <StatCard title="Total Earnings" value="0 Coins" icon={BarChart} description="All-time earnings" className="card-glow" />
+                <StatCard title="Tasks Completed" value={tasksCompleted} icon={CheckCircle2} description="Keep up the great work!" className="card-glow" />
+                <StatCard title="Total Earnings" value={`${totalEarnings.toLocaleString()} Coins`} icon={BarChart} description="All-time earnings" className="card-glow" />
             </>
         )}
       </div>
