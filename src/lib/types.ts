@@ -100,8 +100,3 @@ export type TaskSubmission = {
   proof: string;
   reward: number;
 };
-
-export type PlatformSettings = {
-  id: string;
-  cryptoDepositAddress: string;
-};

@@ -78,10 +78,5 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    match /settings/{settingsId} {
-        allow read: if request.auth != null;
-        allow write: if isAdmin();
-    }
-
   }
 }

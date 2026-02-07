@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import PageHeader from '@/components/dashboard/page-header';
@@ -24,7 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import React, { useState, useMemo, useRef } from 'react';
-import type { Agent, Deposit, Withdrawal, PlatformSettings } from '@/lib/types';
+import type { Agent, Deposit, Withdrawal } from '@/lib/types';
 import { Banknote, Copy, Coins, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -63,6 +64,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
 const USD_TO_NGN_RATE = 1500;
 const USD_TO_ETB_RATE = 58;
+const CRYPTO_WALLET_ID = 'crypto-wallet';
 
 export default function WalletPage() {
   const { toast } = useToast();
@@ -89,13 +91,13 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   
-  const settingsDocRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'settings', 'platform') : null),
+  const cryptoWalletDocRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'agents', CRYPTO_WALLET_ID) : null),
     [firestore]
   );
-  const { data: platformSettings, isLoading: settingsLoading } = useDoc<PlatformSettings>(settingsDocRef);
+  const { data: cryptoWalletAgent, isLoading: cryptoWalletLoading } = useDoc<Agent>(cryptoWalletDocRef);
   
-  const cryptoDepositAddress = platformSettings?.cryptoDepositAddress || 'No address configured';
+  const cryptoDepositAddress = cryptoWalletAgent?.accountNumber || 'No address configured';
 
   // Fetch agents from Firestore
   const agentsQuery = useMemoFirebase(
@@ -109,7 +111,8 @@ export default function WalletPage() {
     if (!user?.country || !agents) {
       return [];
     }
-    return agents.filter((agent) => agent.country === user.country);
+    // Filter out the special crypto wallet agent
+    return agents.filter((agent) => agent.id !== CRYPTO_WALLET_ID && agent.country === user.country);
   }, [agents, user?.country]);
 
   const uniqueBankNames = useMemo(() => {
@@ -117,11 +120,12 @@ export default function WalletPage() {
       return [];
     }
     const countryAgents = agents.filter(
-      (agent) => agent.country === user.country
+      (agent) => agent.id !== CRYPTO_WALLET_ID && agent.country === user.country
     );
     const bankNames = countryAgents.map((agent) => agent.bankName);
     return [...new Set(bankNames)].sort();
   }, [agents, user?.country]);
+
 
   const getCurrencyForCountry = (country: string) => {
     if (country === 'Nigeria') return 'NGN';
@@ -171,7 +175,7 @@ export default function WalletPage() {
   const { data: withdrawals, isLoading: withdrawalsLoading } =
     useCollection<Withdrawal>(withdrawalsQuery);
 
-  const isLoadingHistory = userLoading || depositsLoading || withdrawalsLoading || settingsLoading;
+  const isLoadingHistory = userLoading || depositsLoading || withdrawalsLoading || cryptoWalletLoading;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -484,7 +488,7 @@ export default function WalletPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        {settingsLoading ? (
+                        {cryptoWalletLoading ? (
                           <div className="space-y-4">
                             <Skeleton className="h-4 w-1/3" />
                             <Skeleton className="h-10 w-full" />

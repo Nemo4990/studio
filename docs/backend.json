@@ -394,25 +394,6 @@
         "bankName",
         "accountNumber"
       ]
-    },
-    "PlatformSettings": {
-      "title": "Platform Settings",
-      "description": "Global configuration settings for the TaskVerse platform.",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the settings document."
-        },
-        "cryptoDepositAddress": {
-          "type": "string",
-          "description": "The primary TRC20 USDT wallet address for all user crypto deposits."
-        }
-      },
-      "required": [
-        "id",
-        "cryptoDepositAddress"
-      ]
     }
   },
   "auth": {
@@ -481,12 +462,6 @@
         "$ref": "#/entities/Agent"
       },
       "description": "Collection of payment agents available for deposits and withdrawals."
-    },
-    "/settings/{settingsId}": {
-      "schema": {
-        "$ref": "#/entities/PlatformSettings"
-      },
-      "description": "Global platform settings. Expects a single document with id 'platform'."
     }
   }
 }

@@ -36,9 +36,9 @@ import {
   getDocs,
   writeBatch,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle, Coins, Trash2, HelpCircle } from 'lucide-react';
-import React, { useState } from 'react';
-import type { Agent, PlatformSettings } from '@/lib/types';
+import { MoreHorizontal, PlusCircle, QrCode, Copy } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import type { Agent } from '@/lib/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,7 +64,6 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -79,67 +78,59 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+const CRYPTO_WALLET_ID = 'crypto-wallet';
 
 // Zod Schema for Crypto Settings
 const settingsSchema = z.object({
-  cryptoDepositAddress: z.string().min(26, 'Please enter a valid crypto address'),
+  cryptoAddress: z.string().min(26, 'Please enter a valid crypto address'),
 });
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 // Component to manage the global crypto wallet
-function CryptoWalletManager() {
-  const { user, loading: userLoading } = useUser();
+function CryptoWalletManager({ user }: { user: any }) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [addressForQr, setAddressForQr] = useState('');
 
-  const settingsDocRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'settings', 'platform') : null),
-    [firestore]
-  );
-  
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: {
-      cryptoDepositAddress: '',
-    },
+    defaultValues: { cryptoAddress: '' },
   });
 
-  const pageIsLoading = userLoading;
-
   const onSubmit = (values: SettingsFormValues) => {
-    if (!settingsDocRef) return;
+    if (!firestore) return;
+    toast({ title: 'Saving wallet address...' });
+    
+    const cryptoAgentRef = doc(firestore, 'agents', CRYPTO_WALLET_ID);
+    const cryptoAgentData = {
+        id: CRYPTO_WALLET_ID,
+        name: 'USDT (TRC20) Wallet',
+        country: 'Global',
+        bankName: 'TRC20 Network',
+        accountNumber: values.cryptoAddress
+    };
 
-    if (user?.role !== 'admin') {
-      toast({
-        variant: 'destructive',
-        title: 'Permission Denied',
-        description: 'You are not authorized to perform this action.',
-      });
-      return;
-    }
-
-    toast({ title: 'Saving settings...' });
-    // Include the 'id' field to match the schema requirements
-    setDoc(settingsDocRef, { id: 'platform', ...values }, { merge: true })
+    setDoc(cryptoAgentRef, cryptoAgentData, { merge: true })
       .then(() => {
         toast({ title: 'Crypto wallet saved successfully!' });
-        form.reset({ cryptoDepositAddress: '' }); // Clear form on success
+        setAddressForQr(values.cryptoAddress);
+        form.reset({ cryptoAddress: '' });
       })
-      .catch(() => {
+      .catch((error) => {
         const permissionError = new FirestorePermissionError({
-          path: settingsDocRef.path,
+          path: cryptoAgentRef.path,
           operation: 'write',
-          requestResourceData: { id: 'platform', ...values },
+          requestResourceData: cryptoAgentData,
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-          variant: 'destructive',
-          title: 'Save Failed',
-          description: 'You do not have permission to modify these settings.',
-        });
       });
+  };
+  
+   const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast({ title: 'Copied to clipboard!' });
   };
 
   return (
@@ -149,36 +140,48 @@ function CryptoWalletManager() {
           <CardHeader>
             <CardTitle className="font-headline">Crypto Deposit Wallet</CardTitle>
             <CardDescription>
-              Enter the primary crypto wallet address. Users will see this address to make deposits.
+              Enter the primary TRC20 USDT address. Users will see this address and QR code to make deposits.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            {pageIsLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-6 w-1/3" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : (
-              <FormField
-                control={form.control}
-                name="cryptoDepositAddress"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>USDT (TRC20) Deposit Address</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter the wallet address to display to users..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+          <CardContent className="grid md:grid-cols-2 gap-6 items-start">
+             <div className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="cryptoAddress"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>USDT (TRC20) Deposit Address</FormLabel>
+                        <FormControl>
+                        <Input placeholder="Enter the wallet address..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+                <Button type="submit" disabled={form.formState.isSubmitting}>
+                    {form.formState.isSubmitting ? 'Saving...' : 'Save Crypto Wallet'}
+                </Button>
+                <Alert variant="destructive">
+                    <QrCode className="h-4 w-4" />
+                    <AlertTitle>Important</AlertTitle>
+                    <AlertDescription>
+                        Ensure this is a valid TRC20 Network address. Sending other assets will result in loss of funds.
+                    </AlertDescription>
+                </Alert>
+             </div>
+             {addressForQr && (
+                <div className="flex flex-col items-center gap-4 text-center p-4 rounded-lg bg-secondary">
+                    <h3 className="font-semibold">Live QR Code Preview</h3>
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${addressForQr}&bgcolor=292d3e&color=ffffff&qzone=1`} alt="QR Code" width="160" height="160" />
+                    <div className="flex items-center gap-2 w-full">
+                        <Input readOnly value={addressForQr} className="font-mono text-xs" />
+                        <Button variant="ghost" size="icon" type="button" onClick={() => handleCopy(addressForQr)}>
+                            <Copy />
+                        </Button>
+                    </div>
+                </div>
+             )}
           </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={form.formState.isSubmitting || pageIsLoading}>
-              {form.formState.isSubmitting ? 'Saving...' : 'Save Crypto Wallet'}
-            </Button>
-          </CardFooter>
         </form>
       </Form>
     </Card>
@@ -209,6 +212,8 @@ export default function AdminAgentsPage() {
     [firestore, user]
   );
   const { data: agents, isLoading: agentsLoading } = useCollection<Agent>(agentsQuery);
+  
+  const localAgents = useMemo(() => agents?.filter(a => a.id !== CRYPTO_WALLET_ID), [agents]);
 
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(agentSchema),
@@ -302,7 +307,7 @@ export default function AdminAgentsPage() {
       </PageHeader>
       
       <div className="space-y-8">
-        <CryptoWalletManager />
+        <CryptoWalletManager user={user} />
 
         <Card>
           <CardHeader>
@@ -313,7 +318,7 @@ export default function AdminAgentsPage() {
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-40 w-full" /> : 
-             agents && agents.length === 0 ? (
+             localAgents && localAgents.length === 0 ? (
               <div className="text-center py-10 border-2 border-dashed rounded-lg">
                   <p className="text-muted-foreground">No local agents found.</p>
                   <Button variant="link" onClick={seedDatabase}>Click here to add initial agents</Button>
@@ -330,7 +335,7 @@ export default function AdminAgentsPage() {
                   </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {agents?.map((agent) => (
+                  {localAgents?.map((agent) => (
                       <TableRow key={agent.id}>
                       <TableCell>{agent.name}</TableCell>
                       <TableCell>{agent.country}</TableCell>
