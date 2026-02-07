@@ -37,7 +37,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import type { User, TaskSubmission, Deposit, Withdrawal } from '@/lib/types';
-import { collection, Timestamp, query, orderBy } from 'firebase/firestore';
+import { collection, Timestamp, query, orderBy, where } from 'firebase/firestore';
 import {
   MoreHorizontal,
   Coins,
@@ -72,12 +72,13 @@ function UserDetailsDialog({
 }) {
   const firestore = useFirestore();
 
-  // Queries for user's subcollections
+  // Queries for user's activities from top-level collections, filtered by userId
   const submissionsQuery = useMemoFirebase(
     () =>
       user
         ? query(
-            collection(firestore, 'users', user.id, 'submissions'),
+            collection(firestore, 'submissions'),
+            where('userId', '==', user.id),
             orderBy('submittedAt', 'desc')
           )
         : null,
@@ -90,7 +91,8 @@ function UserDetailsDialog({
     () =>
       user
         ? query(
-            collection(firestore, 'users', user.id, 'deposits'),
+            collection(firestore, 'deposits'),
+            where('userId', '==', user.id),
             orderBy('createdAt', 'desc')
           )
         : null,
@@ -103,7 +105,8 @@ function UserDetailsDialog({
     () =>
       user
         ? query(
-            collection(firestore, 'users', user.id, 'withdrawals'),
+            collection(firestore, 'withdrawals'),
+            where('userId', '==', user.id),
             orderBy('requestedAt', 'desc')
           )
         : null,
