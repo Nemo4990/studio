@@ -25,21 +25,21 @@ service cloud.firestore {
 
       match /deposits/{depositId} {
         allow get: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
-        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        allow list: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
         allow create: if request.auth != null && request.auth.uid == userId;
         allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       }
 
       match /withdrawals/{withdrawalId} {
         allow get: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
-        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        allow list: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
         allow create: if request.auth != null && request.auth.uid == userId;
         allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       }
 
       match /submissions/{submissionId} {
         allow get: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
-        allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+        allow list: if (request.auth != null && request.auth.uid == userId) || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
         allow create: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       }
@@ -57,15 +57,25 @@ service cloud.firestore {
     }
     
     match /deposits/{depositId} {
-      allow list: if request.auth != null; // All authenticated users can list for the activity feed
-      allow get, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Explicitly allow list for all authenticated users for the activity feed.
+      allow list: if request.auth != null;
+      // Allow get only for admins.
+      allow get: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Create for admins or the user who owns the data.
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      // Update and delete only for admins.
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
     match /withdrawals/{withdrawalId} {
-      allow list: if request.auth != null; // All authenticated users can list for the activity feed
-      allow get, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Explicitly allow list for all authenticated users for the activity feed.
+      allow list: if request.auth != null;
+      // Allow get only for admins.
+      allow get: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      // Create for admins or the user who owns the data.
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
+      // Update and delete only for admins.
+      allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
     match /agents/{agentId} {
