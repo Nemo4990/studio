@@ -1,3 +1,4 @@
+
 'use client';
 
 import PageHeader from '@/components/dashboard/page-header';
@@ -24,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import React, { useState, useMemo, useRef } from 'react';
 import type { Agent, Deposit, Withdrawal } from '@/lib/types';
-import { Banknote, Copy, Coins } from 'lucide-react';
+import { Banknote, Copy, Coins, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   useUser,
@@ -55,6 +56,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
 const USD_TO_NGN_RATE = 1500;
@@ -66,15 +68,21 @@ export default function WalletPage() {
   const firestore = useFirestore();
   const auth = useAuth();
 
+  // Local Deposit State
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [depositAmount, setDepositAmount] = useState('');
   const [depositProofFile, setDepositProofFile] = useState<File | null>(null);
   const depositProofInputRef = useRef<HTMLInputElement>(null);
 
+  // Local Withdrawal State
   const [withdrawalAmount, setWithdrawalAmount] = useState('');
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
+  
+  // Crypto Withdrawal State
+  const [cryptoWithdrawAmount, setCryptoWithdrawAmount] = useState('');
+  const [cryptoWithdrawAddress, setCryptoWithdrawAddress] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
@@ -125,6 +133,8 @@ export default function WalletPage() {
 
   const maxWithdrawalInUSD = user ? (user.level || 1) * 100 : 0;
   const maxWithdrawalAmountInLocal = maxWithdrawalInUSD * localRate;
+
+  const MOCK_CRYPTO_ADDRESS = 'TQp5p7...aRpl0nBcha1nmockaddr';
 
   // Query user-specific sub-collections for their history
   const depositsQuery = useMemoFirebase(
@@ -379,6 +389,21 @@ export default function WalletPage() {
       });
   };
 
+  const handleCryptoWithdrawalSubmit = () => {
+    if (!cryptoWithdrawAddress || !cryptoWithdrawAmount) {
+        toast({ variant: 'destructive', title: 'Missing Information', description: 'Please fill out all fields.' });
+        return;
+    }
+    // Simulate submission
+    setLoading(true);
+    setTimeout(() => {
+        toast({ title: 'Crypto Withdrawal Requested', description: 'Your request is being processed.' });
+        setCryptoWithdrawAmount('');
+        setCryptoWithdrawAddress('');
+        setLoading(false);
+    }, 1500);
+  }
+
   const handleSendVerificationEmail = async () => {
     if (!auth.currentUser) return;
     setIsSendingVerification(true);
@@ -407,16 +432,109 @@ export default function WalletPage() {
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         <div className="lg:col-span-2 order-2 lg:order-1">
-          <Tabs defaultValue="deposit">
-            <TabsList className="grid w-full grid-cols-3 md:w-[400px]">
-              <TabsTrigger value="deposit">Deposit</TabsTrigger>
-              <TabsTrigger value="withdraw">Withdraw</TabsTrigger>
+          <Tabs defaultValue="crypto-deposit">
+            <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 md:w-auto">
+              <TabsTrigger value="crypto-deposit">Crypto Deposit</TabsTrigger>
+              <TabsTrigger value="crypto-withdraw">Crypto Withdraw</TabsTrigger>
+              <TabsTrigger value="local-deposit">Local Deposit</TabsTrigger>
+              <TabsTrigger value="local-withdraw">Local Withdraw</TabsTrigger>
               <TabsTrigger value="history">History</TabsTrigger>
             </TabsList>
-            <TabsContent value="deposit">
+
+            <TabsContent value="crypto-deposit">
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Deposit Cryptocurrency</CardTitle>
+                        <CardDescription>Send crypto directly to your TaskVerse wallet to upgrade your level.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                         <div className="space-y-2">
+                            <Label htmlFor="crypto-select">Select Currency</Label>
+                             <Select defaultValue="usdt-trc20">
+                                <SelectTrigger id="crypto-select">
+                                    <SelectValue placeholder="Select a currency" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="usdt-trc20">USDT (TRC20)</SelectItem>
+                                    <SelectItem value="btc" disabled>Bitcoin (BTC)</SelectItem>
+                                    <SelectItem value="eth" disabled>Ethereum (ETH)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Your USDT (TRC20) Deposit Address</Label>
+                            <div className="flex items-center gap-2">
+                                <Input readOnly value={MOCK_CRYPTO_ADDRESS} className="font-mono" />
+                                <Button variant="ghost" size="icon" onClick={() => handleCopy(MOCK_CRYPTO_ADDRESS)}>
+                                    <Copy />
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="flex flex-col items-center gap-4 text-center p-4 rounded-lg bg-secondary">
+                             <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${MOCK_CRYPTO_ADDRESS}&bgcolor=292d3e&color=ffffff&qzone=1`} alt="QR Code" width="160" height="160" />
+                             <p className="text-sm text-muted-foreground">Scan QR code to deposit</p>
+                        </div>
+                        <Alert variant="destructive">
+                            <QrCode className="h-4 w-4" />
+                            <AlertTitle>Important: Read Before Depositing</AlertTitle>
+                            <AlertDescription>
+                                Only send USDT assets on the TRC20 (Tron) network to this address. Sending any other asset or using a different network will result in the permanent loss of your funds.
+                            </AlertDescription>
+                        </Alert>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="crypto-withdraw">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Withdraw Cryptocurrency</CardTitle>
+                        <CardDescription>Withdraw your Coins as cryptocurrency to an external wallet.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {user && (
+                            <div className="rounded-lg border p-4">
+                                <p className="text-sm text-muted-foreground">Available Balance</p>
+                                <p className="text-lg font-bold flex items-center gap-2">
+                                <Coins className="size-5 text-amber-500" />
+                                {(user.walletBalance || 0).toLocaleString()} Coins
+                                <span className="text-sm text-muted-foreground">
+                                    (≈ ${userBalanceInUSD.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                </span>
+                                </p>
+                            </div>
+                        )}
+                         <div className="space-y-2">
+                            <Label>Withdraw As</Label>
+                            <Select defaultValue="usdt-trc20">
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select crypto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="usdt-trc20">USDT (TRC20)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="crypto-withdraw-amount">Amount to Withdraw (Coins)</Label>
+                            <Input id="crypto-withdraw-amount" type="number" placeholder="e.g., 10000" value={cryptoWithdrawAmount} onChange={(e) => setCryptoWithdrawAmount(e.target.value)} />
+                             <p className="text-xs text-muted-foreground">100 Coins = $1.00 USD. A network fee will be applied during processing.</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="crypto-withdraw-address">Destination Wallet Address</Label>
+                            <Input id="crypto-withdraw-address" placeholder="Enter your USDT (TRC20) address" value={cryptoWithdrawAddress} onChange={(e) => setCryptoWithdrawAddress(e.target.value)} />
+                        </div>
+                        <Button className="w-full" onClick={handleCryptoWithdrawalSubmit} disabled={loading}>
+                            {loading ? 'Submitting...' : 'Request Crypto Withdrawal'}
+                        </Button>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="local-deposit">
               <Card>
                 <CardHeader>
-                  <CardTitle className="font-headline">Make a Deposit</CardTitle>
+                  <CardTitle className="font-headline">Make a Local Deposit</CardTitle>
                   <CardDescription>
                     Making a deposit increases your user level, unlocking access
                     to more rewarding tasks. Your wallet balance (Coins) is
@@ -443,37 +561,38 @@ export default function WalletPage() {
                       {!agentsLoading && user?.country && (
                         <div>
                           <Label className="text-muted-foreground">
-                            Showing agents for:
+                            Showing agents for: <span className="font-bold text-lg text-foreground">{user.country}</span>
                           </Label>
-                          <p className="font-bold text-lg">{user.country}</p>
                         </div>
                       )}
 
                       {!agentsLoading && filteredAgents.length > 0 && (
                         <div>
-                          <Label>Available Agents</Label>
-                          <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filteredAgents.map((agent) => (
-                              <Card
-                                key={agent.id}
-                                className={cn(
-                                  'cursor-pointer',
-                                  selectedAgent?.id === agent.id &&
-                                    'border-primary ring-2 ring-primary'
-                                )}
-                                onClick={() => setSelectedAgent(agent)}
-                              >
-                                <CardHeader>
-                                  <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Banknote className="size-5" /> {agent.name}
-                                  </CardTitle>
-                                  <CardDescription>
-                                    {agent.country}
-                                  </CardDescription>
-                                </CardHeader>
-                              </Card>
-                            ))}
-                          </div>
+                            <Label htmlFor="agent-select">Select a Deposit Agent</Label>
+                            <Select
+                                onValueChange={(agentId) => {
+                                    const agent = agents?.find(a => a.id === agentId);
+                                    setSelectedAgent(agent || null);
+                                }}
+                                value={selectedAgent?.id || ''}
+                            >
+                                <SelectTrigger id="agent-select">
+                                    <SelectValue placeholder="Choose a verified agent" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {filteredAgents.map((agent) => (
+                                    <SelectItem key={agent.id} value={agent.id}>
+                                        <div className="flex items-center gap-3">
+                                            <Banknote className="size-5 text-muted-foreground" />
+                                            <div>
+                                                <p>{agent.name}</p>
+                                                <p className="text-xs text-muted-foreground">{agent.bankName}</p>
+                                            </div>
+                                        </div>
+                                    </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                       )}
 
@@ -570,11 +689,11 @@ export default function WalletPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-            <TabsContent value="withdraw">
+            <TabsContent value="local-withdraw">
               <Card>
                 <CardHeader>
                   <CardTitle className="font-headline">
-                    Request Withdrawal
+                    Request Local Withdrawal
                   </CardTitle>
                   <CardDescription>
                     Convert your Coins to local currency. Your maximum
@@ -869,3 +988,4 @@ export default function WalletPage() {
     </>
   );
 }
+
