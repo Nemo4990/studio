@@ -193,6 +193,19 @@
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Deposit)"
         },
+        "user": {
+          "type": "object",
+          "description": "Denormalized user data for display purposes.",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "avatarUrl": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        },
         "agentId": {
           "type": "string",
           "description": "Reference to the Agent handling the deposit."
@@ -228,6 +241,7 @@
       "required": [
         "id",
         "userId",
+        "user",
         "agentId",
         "amount",
         "currency",
@@ -249,6 +263,19 @@
         "userId": {
           "type": "string",
           "description": "Reference to User. (Relationship: User 1:N Withdrawal)"
+        },
+        "user": {
+          "type": "object",
+          "description": "Denormalized user data for display purposes.",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "avatarUrl": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
         },
         "amount": {
           "type": "number",
@@ -296,6 +323,7 @@
       "required": [
         "id",
         "userId",
+        "user",
         "amount",
         "currency",
         "userBankInfo",

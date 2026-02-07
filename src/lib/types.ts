@@ -53,6 +53,10 @@ export type Deposit = {
   status: 'pending' | 'confirmed' | 'failed';
   proofOfPayment: string;
   createdAt: Date;
+  user: {
+      name: string;
+      avatarUrl: string;
+  };
 };
 
 
@@ -70,6 +74,10 @@ export type Withdrawal = {
   userBankInfo: UserBankInfo;
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: Date;
+  user: {
+      name: string;
+      avatarUrl: string;
+  };
 };
 
 export type NavItem = {

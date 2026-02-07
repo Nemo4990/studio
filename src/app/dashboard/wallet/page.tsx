@@ -191,6 +191,10 @@ export default function WalletPage() {
         status: 'pending' as const,
         proofOfPayment: proofOfPaymentUrl,
         createdAt: serverTimestamp(),
+        user: {
+          name: user.name,
+          avatarUrl: user.avatarUrl,
+        },
       };
       
       const batch = writeBatch(firestore);
@@ -275,6 +279,10 @@ export default function WalletPage() {
       userBankInfo: { bankName, accountNumber, accountName },
       status: 'pending' as const,
       requestedAt: serverTimestamp(),
+      user: {
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      },
     };
 
     const batch = writeBatch(firestore);
