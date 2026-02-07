@@ -23,7 +23,6 @@ import {
   useFirestore,
   useMemoFirebase,
   useUser,
-  useDoc,
   errorEmitter,
   FirestorePermissionError,
 } from '@/firebase';
@@ -34,8 +33,8 @@ import {
   deleteDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle, Copy, Trash2 } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import React, { useState } from 'react';
 import type { Agent, PlatformSettings } from '@/lib/types';
 import {
   DropdownMenu,
@@ -79,11 +78,10 @@ function CryptoWalletManager() {
   const { toast } = useToast();
 
   const settingsDocRef = useMemoFirebase(
-    () => (firestore && user ? doc(firestore, 'settings', 'platform') : null),
-    [firestore, user]
+    () => (firestore ? doc(firestore, 'settings', 'platform') : null),
+    [firestore]
   );
-  const { data: settings, isLoading: settingsLoading } = useDoc<PlatformSettings>(settingsDocRef);
-
+  
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
@@ -91,21 +89,25 @@ function CryptoWalletManager() {
     },
   });
 
-  const pageIsLoading = userLoading || settingsLoading;
+  const pageIsLoading = userLoading;
 
-  useEffect(() => {
-    if (settings) {
-      form.reset({ cryptoDepositAddress: settings.cryptoDepositAddress });
-    }
-  }, [settings, form]);
-  
   const onSubmit = (values: SettingsFormValues) => {
     if (!settingsDocRef) return;
+
+    if (user?.role !== 'admin') {
+      toast({
+        variant: 'destructive',
+        title: 'Permission Denied',
+        description: 'You are not authorized to perform this action.',
+      });
+      return;
+    }
 
     toast({ title: 'Saving settings...' });
     setDoc(settingsDocRef, { id: 'platform', ...values }, { merge: true })
       .then(() => {
         toast({ title: 'Crypto wallet saved successfully!' });
+        form.reset({ cryptoDepositAddress: '' }); // Clear form on success
       })
       .catch(() => {
         const permissionError = new FirestorePermissionError({
@@ -121,11 +123,6 @@ function CryptoWalletManager() {
         });
       });
   };
-  
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: 'Copied to clipboard!' });
-  };
 
   return (
     <Card>
@@ -134,7 +131,7 @@ function CryptoWalletManager() {
           <CardHeader>
             <CardTitle className="font-headline">Crypto Deposit Wallet</CardTitle>
             <CardDescription>
-              Set the primary crypto wallet address where all users will send their deposits.
+              Enter the primary crypto wallet address. Users will see this address to make deposits.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -144,7 +141,6 @@ function CryptoWalletManager() {
                 <Skeleton className="h-10 w-full" />
               </div>
             ) : (
-              <>
               <FormField
                 control={form.control}
                 name="cryptoDepositAddress"
@@ -152,27 +148,12 @@ function CryptoWalletManager() {
                   <FormItem>
                     <FormLabel>USDT (TRC20) Deposit Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter the wallet address..." {...field} />
+                      <Input placeholder="Enter the wallet address to display to users..." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-               {form.getValues('cryptoDepositAddress') && (
-                  <div className="flex flex-col sm:flex-row items-center gap-6 text-center p-4 rounded-lg bg-secondary">
-                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${form.getValues('cryptoDepositAddress')}&bgcolor=292d3e&color=ffffff&qzone=1`} alt="QR Code" width="160" height="160" />
-                       <div className='flex-1 text-left space-y-4'>
-                           <p className="text-sm text-muted-foreground">This address and QR code will be shown to all users on the wallet deposit page.</p>
-                           <div className="flex items-center gap-2">
-                              <Input readOnly value={form.getValues('cryptoDepositAddress')} className="font-mono bg-background" />
-                              <Button variant="ghost" size="icon" type="button" onClick={() => handleCopy(form.getValues('cryptoDepositAddress'))}>
-                                  <Copy />
-                              </Button>
-                          </div>
-                       </div>
-                  </div>
-              )}
-              </>
             )}
           </CardContent>
           <CardFooter>
@@ -264,7 +245,7 @@ export default function AdminAgentsPage() {
   };
 
   if (userLoading) {
-    return <PageHeader title="Agents & Wallets" description="Loading..." />;
+    return <PageHeader title="Agents &amp; Wallets" description="Loading..." />;
   }
 
   if (user?.role !== 'admin') {
@@ -293,7 +274,7 @@ export default function AdminAgentsPage() {
   return (
     <>
       <PageHeader
-        title="Agents & Wallets"
+        title="Agents &amp; Wallets"
         description="Manage local currency agents and the global crypto deposit wallet."
       >
         <Button onClick={() => handleOpenDialog()}>
