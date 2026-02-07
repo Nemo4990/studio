@@ -181,7 +181,7 @@ export default function WalletPage() {
       const userDepositRef = doc(collection(firestore, 'users', user.id, 'deposits'));
       const topLevelDepositRef = doc(collection(firestore, 'deposits'), userDepositRef.id);
 
-      const depositData = {
+      const depositData: Omit<Deposit, 'proofOfPayment'> & { proofOfPayment: string } = {
         id: userDepositRef.id,
         userId: user.id,
         agentId: selectedAgent.id,
@@ -190,16 +190,18 @@ export default function WalletPage() {
         currency: getCurrencyForCountry(user.country!),
         status: 'pending' as const,
         proofOfPayment: proofOfPaymentUrl,
-        createdAt: serverTimestamp(),
+        createdAt: serverTimestamp() as any, // Cast for client-side representation
         user: {
-          name: user.name,
-          avatarUrl: user.avatarUrl,
+          name: user.name || 'Anonymous',
+          avatarUrl: user.avatarUrl || '',
         },
       };
+
+      const { proofOfPayment, ...publicDepositData } = depositData;
       
       const batch = writeBatch(firestore);
       batch.set(userDepositRef, depositData);
-      batch.set(topLevelDepositRef, depositData);
+      batch.set(topLevelDepositRef, publicDepositData);
       
       batch.commit().then(() => {
         toast({
@@ -216,7 +218,7 @@ export default function WalletPage() {
          const permissionError = new FirestorePermissionError({
             path: topLevelDepositRef.path,
             operation: 'create',
-            requestResourceData: depositData,
+            requestResourceData: publicDepositData,
          });
          errorEmitter.emit('permission-error', permissionError);
          toast({
@@ -271,23 +273,25 @@ export default function WalletPage() {
     const userWithdrawalRef = doc(collection(firestore, 'users', user.id, 'withdrawals'));
     const topLevelWithdrawalRef = doc(collection(firestore, 'withdrawals'), userWithdrawalRef.id);
 
-    const withdrawalData = {
+    const withdrawalData: Withdrawal = {
       id: userWithdrawalRef.id,
       userId: user.id,
       amount: amount,
       currency: localCurrency,
       userBankInfo: { bankName, accountNumber, accountName },
       status: 'pending' as const,
-      requestedAt: serverTimestamp(),
+      requestedAt: serverTimestamp() as any, // Cast for client-side representation
       user: {
-        name: user.name,
-        avatarUrl: user.avatarUrl,
+        name: user.name || 'Anonymous',
+        avatarUrl: user.avatarUrl || '',
       },
     };
 
+    const { userBankInfo, ...publicWithdrawalData } = withdrawalData;
+
     const batch = writeBatch(firestore);
     batch.set(userWithdrawalRef, withdrawalData);
-    batch.set(topLevelWithdrawalRef, withdrawalData);
+    batch.set(topLevelWithdrawalRef, publicWithdrawalData);
     
     batch.commit().then(() => {
       toast({
@@ -302,7 +306,7 @@ export default function WalletPage() {
       const permissionError = new FirestorePermissionError({
           path: topLevelWithdrawalRef.path,
           operation: 'create',
-          requestResourceData: withdrawalData,
+          requestResourceData: publicWithdrawalData,
       });
       errorEmitter.emit('permission-error', permissionError);
       toast({

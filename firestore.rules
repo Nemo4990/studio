@@ -57,12 +57,14 @@ service cloud.firestore {
     }
     
     match /deposits/{depositId} {
-      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow list: if request.auth != null; // All authenticated users can list for the activity feed
+      allow get, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
     }
     
     match /withdrawals/{withdrawalId} {
-      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow list: if request.auth != null; // All authenticated users can list for the activity feed
+      allow get, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
     }
 
