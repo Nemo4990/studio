@@ -4,9 +4,9 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAppAdmin() {
-      // Check if the user is authenticated and if their user document has the 'admin' role.
-      // This function now correctly allows reading the user's own profile to check the role.
-      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Check if the authenticated user's email is the admin email.
+      // This avoids a recursive database 'get' and is more secure and performant.
+      return request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
     match /users/{userId} {
