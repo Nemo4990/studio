@@ -1,3 +1,4 @@
+
 'use client';
 
 import PageHeader from '@/components/dashboard/page-header';
@@ -130,7 +131,7 @@ function CryptoWalletManager() {
         const permissionError = new FirestorePermissionError({
           path: settingsDocRef.path,
           operation: 'write',
-          requestResourceData: values,
+          requestResourceData: { id: 'platform', ...values },
         });
         errorEmitter.emit('permission-error', permissionError);
         toast({
