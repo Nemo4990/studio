@@ -1,0 +1,25 @@
+{
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "redirects": [
+      {
+        "source": "/",
+        "destination": "/app",
+        "type": 301
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/app/**",
+        "apphosting": {
+          "backendId": "nextn"
+        }
+      }
+    ]
+  }
+}
