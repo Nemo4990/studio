@@ -34,7 +34,7 @@ import {
   deleteDoc,
   updateDoc,
 } from 'firebase/firestore';
-import { MoreHorizontal, PlusCircle, Copy, Coins, Trash2, HelpCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Copy, Trash2 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import type { Agent, PlatformSettings } from '@/lib/types';
 import {
@@ -52,7 +52,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -75,12 +74,13 @@ type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 // Component to manage the global crypto wallet
 function CryptoWalletManager() {
+  const { user, loading: userLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const settingsDocRef = useMemoFirebase(
-    () => (firestore ? doc(firestore, 'settings', 'platform') : null),
-    [firestore]
+    () => (firestore && user ? doc(firestore, 'settings', 'platform') : null),
+    [firestore, user]
   );
   const { data: settings, isLoading: settingsLoading } = useDoc<PlatformSettings>(settingsDocRef);
 
@@ -91,32 +91,35 @@ function CryptoWalletManager() {
     },
   });
 
+  const pageIsLoading = userLoading || settingsLoading;
+
   useEffect(() => {
     if (settings) {
       form.reset({ cryptoDepositAddress: settings.cryptoDepositAddress });
     }
   }, [settings, form]);
   
-  const onSubmit = async (values: SettingsFormValues) => {
+  const onSubmit = (values: SettingsFormValues) => {
     if (!settingsDocRef) return;
 
     toast({ title: 'Saving settings...' });
-    try {
-      await setDoc(settingsDocRef, { id: 'platform', ...values }, { merge: true });
-      toast({ title: 'Crypto wallet saved successfully!' });
-    } catch (error: any) {
-      const permissionError = new FirestorePermissionError({
-        path: settingsDocRef.path,
-        operation: 'write',
-        requestResourceData: values,
+    setDoc(settingsDocRef, { id: 'platform', ...values }, { merge: true })
+      .then(() => {
+        toast({ title: 'Crypto wallet saved successfully!' });
+      })
+      .catch(() => {
+        const permissionError = new FirestorePermissionError({
+          path: settingsDocRef.path,
+          operation: 'write',
+          requestResourceData: values,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          variant: 'destructive',
+          title: 'Save Failed',
+          description: 'You do not have permission to modify these settings.',
+        });
       });
-      errorEmitter.emit('permission-error', permissionError);
-      toast({
-        variant: 'destructive',
-        title: 'Save Failed',
-        description: 'You do not have permission to modify these settings.',
-      });
-    }
   };
   
   const handleCopy = (text: string) => {
@@ -135,8 +138,11 @@ function CryptoWalletManager() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {settingsLoading ? (
-              <Skeleton className="h-10 w-full" />
+            {pageIsLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-10 w-full" />
+              </div>
             ) : (
               <>
               <FormField
@@ -170,7 +176,7 @@ function CryptoWalletManager() {
             )}
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={form.formState.isSubmitting || settingsLoading}>
+            <Button type="submit" disabled={form.formState.isSubmitting || pageIsLoading}>
               {form.formState.isSubmitting ? 'Saving...' : 'Save Crypto Wallet'}
             </Button>
           </CardFooter>
