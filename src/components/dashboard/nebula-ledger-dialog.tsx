@@ -40,20 +40,23 @@ const nodeConfig = {
 const generateFakeHash = () => '0x' + [...Array(16)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
 const logLines = [
-    'Initializing quantum matrix...',
-    'Authenticating with target node...',
-    () => `Accessing data stream: ${generateFakeHash()}`,
-    'Bypassing firewall layer 1/3...',
-    'Layer 1 breached.',
-    'Bypassing firewall layer 2/3...',
-    () => `Analyzing block: ${generateFakeHash()}`,
-    'Hash mismatch detected. Retrying with alternate key...',
-    () => `Signature verified: ${generateFakeHash()}`,
-    'Bypassing firewall layer 3/3...',
-    'Firewall breached. Accessing core ledger.',
-    'Decrypting root block...',
-    'Finalizing decryption sequence...'
+    'Initializing quantum entanglement matrix...',
+    'Authenticating with target node via ZK-Proof...',
+    () => `Verifying cryptographic signature: ${generateFakeHash()}`,
+    'Access granted. Bypassing L1 firewall...',
+    'Layer 1 breached. Exploiting consensus vulnerability...',
+    'Bypassing L2 sharding protocol...',
+    () => `Analyzing data shard: ${generateFakeHash()}`,
+    'Shard hash mismatch. Attempting consensus override...',
+    () => `Signature re-verified with temporal key: ${generateFakeHash()}`,
+    'Bypassing L3 oracle validation...',
+    'Firewall layers breached. Accessing core ledger.',
+    'Initiating decryption of root block...',
+    'Applying quantum de-encryption algorithm...',
+    'Finalizing decryption sequence...',
+    'Ledger unlocked. Extracting data payload.'
 ];
+
 
 export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: NebulaLedgerDialogProps) {
   const [gameState, setGameState] = useState<GameState>('idle');
@@ -91,7 +94,7 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
                 logIndex++;
             }
 
-        }, 500); // Slowed down to 500ms for readability
+        }, 600); // Slower animation
 
         return () => clearInterval(interval);
     }
@@ -148,14 +151,14 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
       case 'idle':
         return (
           <div className="flex flex-col items-center text-center">
-            <Icon className={cn("size-16 mb-4", config.risk === 'High' ? 'text-destructive' : 'text-primary')} />
+            <Icon className={cn("size-16 mb-4", config.risk === 'High' ? 'text-destructive' : 'text-green-400')} />
             <p className="font-bold text-lg">Decrypting: {config.name}</p>
             <p className="text-sm text-muted-foreground mb-4">Risk Level: {config.risk}</p>
-            <Alert className="text-left mb-6">
-                <Coins className="h-4 w-4" />
-                <AlertTitle>Potential Rewards</AlertTitle>
-                <AlertDescription>
-                    Base reward of {task.reward} coins, with a chance for a jackpot up to <span className="font-bold text-accent">{ (task.reward * config.jackpotMultiplier).toLocaleString() }</span> coins!
+            <Alert className="text-left mb-6 bg-green-900/20 border-green-500/30">
+                <Coins className="h-4 w-4 text-green-400" />
+                <AlertTitle className="text-green-300">Potential Rewards</AlertTitle>
+                <AlertDescription className="text-green-400/80">
+                    Base reward of {task.reward} coins, with a chance for a jackpot up to <span className="font-bold text-green-300">{ (task.reward * config.jackpotMultiplier).toLocaleString() }</span> coins!
                 </AlertDescription>
             </Alert>
             <Button size="lg" onClick={handleStart} className="w-full">
@@ -170,14 +173,14 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
                 <p className="font-bold text-lg">Decrypting Node...</p>
                 <p className="text-sm text-muted-foreground mb-4">Establishing secure connection...</p>
                 
-                <ScrollArea className="h-48 w-full rounded-md border bg-black/50 p-4 my-4 font-mono text-xs text-green-400">
+                <ScrollArea className="h-48 w-full rounded-md border border-green-500/30 bg-black/50 p-4 my-4 font-mono text-xs text-green-400">
                     {decryptionLog.map((line, index) => (
                         <p key={index} className="animate-in fade-in">{`> ${line}`}</p>
                     ))}
                     <div ref={logEndRef} />
                 </ScrollArea>
                 
-                <Progress value={progress} className="w-full" />
+                <Progress value={progress} className="w-full [&>div]:bg-green-400" />
             </div>
         );
         
@@ -187,8 +190,8 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
           <div className="flex flex-col items-center text-center">
             {result.success ? (
                 <>
-                    {result.multiplier > 1 ? <Sparkles className="size-16 mb-4 text-amber-400" /> : <CheckCircle className="size-16 mb-4 text-green-500" />}
-                    <h3 className="font-headline text-2xl font-bold">{result.multiplier > 1 ? 'JACKPOT!' : 'Decryption Successful!'}</h3>
+                    {result.multiplier > 1 ? <Sparkles className="size-16 mb-4 text-amber-400" /> : <CheckCircle className="size-16 mb-4 text-green-400" />}
+                    <h3 className="font-headline text-2xl font-bold text-green-300">{result.multiplier > 1 ? 'JACKPOT!' : 'Decryption Successful!'}</h3>
                 </>
             ) : (
                 <>
@@ -207,7 +210,7 @@ export function NebulaLedgerDialog({ isOpen, onClose, task, onSubmitSuccess }: N
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="bg-background/80 backdrop-blur-sm border-primary/20 shadow-lg shadow-primary/20">
         <DialogHeader>
           <DialogTitle className="font-headline">Nebula Ledger</DialogTitle>
           <DialogDescription>

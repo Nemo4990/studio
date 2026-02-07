@@ -102,8 +102,8 @@ export default function AdminTasksPage() {
 
 
   const tasksQuery = useMemoFirebase(
-    () => (firestore ? collection(firestore, 'tasks') : null),
-    [firestore]
+    () => (firestore && user ? collection(firestore, 'tasks') : null),
+    [firestore, user]
   );
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 

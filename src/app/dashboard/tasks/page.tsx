@@ -43,8 +43,8 @@ export default function TasksPage() {
   const [orderedTasks, setOrderedTasks] = useState<ProcessedTask[]>([]);
   const personalizationRan = useRef(false);
 
-  // Fetch all tasks
-  const tasksQuery = useMemoFirebase(() => (firestore ? collection(firestore, 'tasks') : null), [firestore]);
+  // Fetch all tasks - ONLY when user is authenticated
+  const tasksQuery = useMemoFirebase(() => (firestore && user ? collection(firestore, 'tasks') : null), [firestore, user]);
   const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
 
   // Fetch user's submissions from their private subcollection
@@ -66,7 +66,7 @@ export default function TasksPage() {
     );
 
     return tasks.map(task => {
-        const isGameTask = GAME_TASK_IDS.includes(task.id);
+        const isGameTask = GAME_TASK_IDS.includes(task.id) || task.id.startsWith('nl-');
         const hasBeenSubmitted = submittedTaskIds.has(task.id);
         
         // A non-game task is "completed" if it has been submitted.
@@ -243,7 +243,9 @@ export default function TasksPage() {
     })
     .then(() => {
         // Now, either navigate or open dialog
-        if (task.id === '2') {
+        if (task.id.startsWith('nl-')) {
+            setNebulaLedgerTask(task);
+        } else if (task.id === '2') {
             setIsQuizOpen(true);
         } else if (task.id === '11') {
             router.push('/dashboard/tasks/speedmath');
@@ -300,35 +302,35 @@ export default function TasksPage() {
               </CardHeader>
               <CardContent className="flex-grow">
                 <p className="text-sm text-muted-foreground">{task.description}</p>
-                {task.trialsLeft !== undefined && task.status === 'available' && (
-                  <p className="text-xs text-muted-foreground mt-2">Daily trials left: {Math.max(0, task.trialsLeft)}</p>
+                {(GAME_TASK_IDS.includes(task.id) || task.id.startsWith('nl-')) && task.status === 'available' && (
+                  <p className="text-xs text-muted-foreground mt-2">Daily trials left: {Math.max(0, task.trialsLeft ?? 0)}</p>
                 )}
               </CardContent>
               <CardFooter>
-                {task.status === 'completed' && <Button className="w-full" variant="outline" disabled>Completed</Button>}
+                 {task.status === 'completed' && <Button className="w-full" variant="outline" disabled>Completed</Button>}
                 {task.status === 'locked' && <Button className="w-full" disabled>Locked</Button>}
-                {task.status === 'available' && (
-                  <>
-                    {task.id === '1' && <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>}
+                {task.status === 'available' && (() => {
+                    const isGame = GAME_TASK_IDS.includes(task.id) || task.id.startsWith('nl-');
                     
-                    {task.id.startsWith('nl-') && <Button className="w-full" onClick={() => setNebulaLedgerTask(task)}>Start Decryption</Button>}
-
-                    {GAME_TASK_IDS.includes(task.id) && (
-                      (task.trialsLeft ?? 0) > 0 ? (
-                          <Button className="w-full" onClick={() => handleStartGameOrQuiz(task)}>
-                              {task.id === '2' ? 'Start Quiz' : 'Start Challenge'}
-                          </Button>
-                      ) : (
-                          <Button className="w-full" onClick={() => setPurchaseTask(task)}>
-                              <RefreshCw className="mr-2"/>Purchase More Trials
-                          </Button>
-                      )
-                    )}
+                    if (task.id === '1') {
+                        return <Button className="w-full" onClick={() => handleDailyCheckin(task)} disabled={task.isDisabled}>{task.isDisabled ? 'Claimed Today' : 'Claim Reward'}</Button>;
+                    }
                     
-                    {/* Fallback for other generic tasks */}
-                    {!['1', ...GAME_TASK_IDS].includes(task.id) && !task.id.startsWith('nl-') && <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>}
-                  </>
-                )}
+                    if (isGame) {
+                        return (task.trialsLeft ?? 0) > 0 ? (
+                            <Button className="w-full" onClick={() => handleStartGameOrQuiz(task)}>
+                                {task.id === '2' ? 'Start Quiz' : task.id.startsWith('nl-') ? 'Start Decryption' : 'Start Challenge'}
+                            </Button>
+                        ) : (
+                            <Button className="w-full" onClick={() => setPurchaseTask(task)}>
+                                <RefreshCw className="mr-2"/>Purchase More Trials
+                            </Button>
+                        );
+                    }
+                    
+                    // Fallback for other generic, submittable tasks
+                    return <Button className="w-full" onClick={() => handleGenericSubmit(task)}>Submit Task</Button>;
+                })()}
               </CardFooter>
             </Card>
           ))
