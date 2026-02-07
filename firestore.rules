@@ -52,26 +52,17 @@ service cloud.firestore {
     }
 
     match /submissions/{submissionId} {
-      allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow get: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
     }
     
     match /deposits/{depositId} {
-      allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow get: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
     }
     
     match /withdrawals/{withdrawalId} {
-      allow list: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow get: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow update: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-      allow delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+      allow read, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
     }
 
