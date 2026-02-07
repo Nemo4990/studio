@@ -3,16 +3,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAppAdmin() {
-      // Check if the authenticated user's email is the admin email.
-      // This avoids a recursive database 'get' and is more secure and performant.
-      return request.auth != null && request.auth.token.email == 'admin@taskverse.io';
-    }
+    // NOTE: isAppAdmin() function was removed to fix a recurring permissions issue.
+    // Admin access is now checked inline where needed using:
+    // (request.auth != null && request.auth.token.email == 'admin@taskverse.io')
 
     match /users/{userId} {
       // An admin can read any user profile.
       // A user can only read their own profile.
-      allow get: if isAppAdmin() || request.auth.uid == userId;
+      allow get: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || request.auth.uid == userId;
       // Any authenticated user can list users (needed for some UI elements, but consider restricting).
       allow list: if request.auth != null;
       // A user can create their own profile upon signup.
@@ -22,7 +20,7 @@ service cloud.firestore {
       // An admin can update any profile without restriction.
       allow update: if (
         // Admins can do anything
-        isAppAdmin()
+        (request.auth != null && request.auth.token.email == 'admin@taskverse.io')
       ) || (
         // Users can update their own profile, but with restrictions
         request.auth.uid == userId && 
@@ -46,32 +44,32 @@ service cloud.firestore {
     
     match /users/{userId}/testimonials/{testimonialId} {
       // Users can write their own testimonials. Admins can read any.
-      allow get, list: if request.auth.uid == userId || isAppAdmin();
+      allow get, list: if request.auth.uid == userId || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
       allow write: if request.auth.uid == userId;
     }
 
     match /users/{userId}/deposits/{depositId} {
         // Users can create their own deposits. Admins can read any and update them.
-        allow get, list: if request.auth.uid == userId || isAppAdmin();
+        allow get, list: if request.auth.uid == userId || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
         allow create: if request.auth.uid == userId;
-        allow update: if isAppAdmin();
+        allow update: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
 
     match /users/{userId}/withdrawals/{withdrawalId} {
         // Users can create their own withdrawals. Admins can read any and update them.
-        allow get, list: if request.auth.uid == userId || isAppAdmin();
+        allow get, list: if request.auth.uid == userId || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
         allow create: if request.auth.uid == userId;
-        allow update: if isAppAdmin();
+        allow update: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
 
     match /users/{userId}/submissions/{submissionId} {
         // Users can create their own submissions.
         allow create: if request.auth.uid == userId;
         // Users can read their own submissions, admins can read any.
-        allow get, list: if request.auth.uid == userId || isAppAdmin();
+        allow get, list: if request.auth.uid == userId || (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
         // Only admins can update/delete from the user's private record, which should be rare.
         // The master record is in the top-level collection.
-        allow update, delete: if isAppAdmin();
+        allow update, delete: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
 
     // --- Top-level Collections ---
@@ -80,35 +78,35 @@ service cloud.firestore {
       // Any authenticated user can read tasks.
       allow read: if request.auth != null;
       // ONLY admins can create, update, or delete tasks.
-      allow write: if isAppAdmin();
+      allow write: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
 
     match /submissions/{submissionId} {
       // A user can create their own submission record in the top-level collection.
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       // ONLY Admins can read, update, or delete from the top-level collection.
-      allow read, update, delete: if isAppAdmin();
+      allow read, update, delete: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
     
     match /deposits/{depositId} {
       // Users can create their own deposit record in the top-level collection.
       allow create: if request.auth.uid == request.resource.data.userId;
       // Only admins can read, update, or delete from the top-level collection.
-      allow read, update, delete: if isAppAdmin();
+      allow read, update, delete: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
     
     match /withdrawals/{withdrawalId} {
       // Users can create their own withdrawal record in the top-level collection.
       allow create: if request.auth.uid == request.resource.data.userId;
       // Only admins can read, update, or delete from the top-level collection.
-      allow read, update, delete: if isAppAdmin();
+      allow read, update, delete: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
 
     match /agents/{agentId} {
       // Any authenticated user can read agent information.
       allow read: if request.auth != null;
       // Only admins can add or change agents.
-      allow write: if isAppAdmin();
+      allow write: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io');
     }
 
   }
