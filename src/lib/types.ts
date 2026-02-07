@@ -51,7 +51,7 @@ export type Deposit = {
   amount: number;
   currency: string;
   status: 'pending' | 'confirmed' | 'failed';
-  proofOfPayment: string;
+  proofOfPayment?: string; // Optional for public collection
   createdAt: Date;
   user: {
       name: string;
@@ -71,7 +71,7 @@ export type Withdrawal = {
   userId: string;
   amount: number;
   currency: string;
-  userBankInfo: UserBankInfo;
+  userBankInfo?: UserBankInfo; // Optional for public collection
   status: 'pending' | 'approved' | 'rejected';
   requestedAt: Date;
   user: {
@@ -99,4 +99,9 @@ export type TaskSubmission = {
   status: 'pending' | 'approved' | 'rejected';
   proof: string;
   reward: number;
+};
+
+export type PlatformSettings = {
+  id: string;
+  cryptoDepositAddress: string;
 };

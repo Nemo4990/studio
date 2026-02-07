@@ -37,6 +37,12 @@ export const userNavItems: NavItem[] = [
     icon: Wallet,
     role: 'user',
   },
+  {
+    href: '/dashboard/settings',
+    label: 'Settings',
+    icon: Settings,
+    role: 'user',
+  },
 ];
 
 export const adminNavItems: NavItem[] = [
@@ -85,13 +91,12 @@ export const adminNavItems: NavItem[] = [
     icon: Briefcase,
     role: 'admin',
   },
-];
-
-export const bottomNavItems: NavItem[] = [
   {
-    href: '/dashboard/settings',
-    label: 'Settings',
+    href: '/dashboard/admin/settings',
+    label: 'Platform Settings',
     icon: Settings,
-    role: 'user',
+    role: 'admin',
   },
 ];
+
+export const bottomNavItems: NavItem[] = [];

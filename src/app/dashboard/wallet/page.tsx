@@ -24,7 +24,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import React, { useState, useMemo, useRef } from 'react';
-import type { Agent, Deposit, Withdrawal } from '@/lib/types';
+import type { Agent, Deposit, Withdrawal, PlatformSettings } from '@/lib/types';
 import { Banknote, Copy, Coins, QrCode } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -35,6 +35,7 @@ import {
   errorEmitter,
   FirestorePermissionError,
   useAuth,
+  useDoc,
 } from '@/firebase';
 import {
   collection,
@@ -57,6 +58,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const COIN_TO_USD_RATE = 0.01; // 100 Coins = $1
 const USD_TO_NGN_RATE = 1500;
@@ -86,6 +88,14 @@ export default function WalletPage() {
 
   const [loading, setLoading] = useState(false);
   const [isSendingVerification, setIsSendingVerification] = useState(false);
+  
+  const settingsDocRef = useMemoFirebase(
+    () => (firestore ? doc(firestore, 'settings', 'platform') : null),
+    [firestore]
+  );
+  const { data: platformSettings, isLoading: settingsLoading } = useDoc<PlatformSettings>(settingsDocRef);
+  
+  const cryptoDepositAddress = platformSettings?.cryptoDepositAddress || 'No address configured';
 
   // Fetch agents from Firestore
   const agentsQuery = useMemoFirebase(
@@ -134,8 +144,6 @@ export default function WalletPage() {
   const maxWithdrawalInUSD = user ? (user.level || 1) * 100 : 0;
   const maxWithdrawalAmountInLocal = maxWithdrawalInUSD * localRate;
 
-  const MOCK_CRYPTO_ADDRESS = 'TQp5p7...aRpl0nBcha1nmockaddr';
-
   // Query user-specific sub-collections for their history
   const depositsQuery = useMemoFirebase(
     () =>
@@ -163,7 +171,7 @@ export default function WalletPage() {
   const { data: withdrawals, isLoading: withdrawalsLoading } =
     useCollection<Withdrawal>(withdrawalsQuery);
 
-  const isLoadingHistory = userLoading || depositsLoading || withdrawalsLoading;
+  const isLoadingHistory = userLoading || depositsLoading || withdrawalsLoading || settingsLoading;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -476,19 +484,29 @@ export default function WalletPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Your USDT (TRC20) Deposit Address</Label>
-                            <div className="flex items-center gap-2">
-                                <Input readOnly value={MOCK_CRYPTO_ADDRESS} className="font-mono" />
-                                <Button variant="ghost" size="icon" onClick={() => handleCopy(MOCK_CRYPTO_ADDRESS)}>
-                                    <Copy />
-                                </Button>
+                        {settingsLoading ? (
+                          <div className="space-y-4">
+                            <Skeleton className="h-4 w-1/3" />
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-44 w-full" />
+                          </div>
+                        ) : (
+                          <>
+                            <div className="space-y-2">
+                                <Label>Your USDT (TRC20) Deposit Address</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input readOnly value={cryptoDepositAddress} className="font-mono" />
+                                    <Button variant="ghost" size="icon" onClick={() => handleCopy(cryptoDepositAddress)}>
+                                        <Copy />
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                        <div className="flex flex-col items-center gap-4 text-center p-4 rounded-lg bg-secondary">
-                             <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${MOCK_CRYPTO_ADDRESS}&bgcolor=292d3e&color=ffffff&qzone=1`} alt="QR Code" width="160" height="160" />
-                             <p className="text-sm text-muted-foreground">Scan QR code to deposit</p>
-                        </div>
+                            <div className="flex flex-col items-center gap-4 text-center p-4 rounded-lg bg-secondary">
+                                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${cryptoDepositAddress}&bgcolor=292d3e&color=ffffff&qzone=1`} alt="QR Code" width="160" height="160" />
+                                 <p className="text-sm text-muted-foreground">Scan QR code to deposit</p>
+                            </div>
+                          </>
+                        )}
                         <Alert variant="destructive">
                             <QrCode className="h-4 w-4" />
                             <AlertTitle>Important: Read Before Depositing</AlertTitle>
@@ -976,8 +994,8 @@ export default function WalletPage() {
                                     )?.toDate().toLocaleDateString()}
                                   </TableCell>
                                   <TableCell className="font-mono text-xs">
-                                    {tx.userBankInfo.bankName} - ...
-                                    {tx.userBankInfo.accountNumber.slice(-4)}
+                                    {tx.userBankInfo?.bankName} - ...
+                                    {tx.userBankInfo?.accountNumber.slice(-4)}
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -1003,6 +1021,3 @@ export default function WalletPage() {
     </>
   );
 }
-
-
-

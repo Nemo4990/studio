@@ -57,13 +57,13 @@ service cloud.firestore {
     }
     
     match /deposits/{depositId} {
-      allow read: if request.auth != null; // All authenticated users can read for the activity feed
+      allow read: if request.auth != null;
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
       allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
     
     match /withdrawals/{withdrawalId} {
-      allow read: if request.auth != null; // All authenticated users can read for the activity feed
+      allow read: if request.auth != null;
       allow create: if (request.auth != null && request.auth.token.email == 'admin@taskverse.io') || (request.auth != null && request.resource.data.userId == request.auth.uid);
       allow update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
@@ -71,6 +71,10 @@ service cloud.firestore {
     match /agents/{agentId} {
       allow get, list: if request.auth != null;
       allow create, update, delete: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
+    }
+
+    match /settings/{settingsId} {
+        allow read, write: if request.auth != null && request.auth.token.email == 'admin@taskverse.io';
     }
 
   }

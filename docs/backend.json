@@ -246,7 +246,6 @@
         "amount",
         "currency",
         "status",
-        "proofOfPayment",
         "createdAt"
       ]
     },
@@ -326,7 +325,6 @@
         "user",
         "amount",
         "currency",
-        "userBankInfo",
         "status",
         "requestedAt"
       ]
@@ -396,6 +394,25 @@
         "bankName",
         "accountNumber"
       ]
+    },
+    "PlatformSettings": {
+      "title": "Platform Settings",
+      "description": "Global configuration settings for the TaskVerse platform.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the settings document."
+        },
+        "cryptoDepositAddress": {
+          "type": "string",
+          "description": "The primary TRC20 USDT wallet address for all user crypto deposits."
+        }
+      },
+      "required": [
+        "id",
+        "cryptoDepositAddress"
+      ]
     }
   },
   "auth": {
@@ -448,22 +465,28 @@
       "description": "Collection of submissions made by a specific user."
     },
     "/users/{userId}/deposits/{depositId}": {
-        "schema": {
-            "$ref": "#/entities/Deposit"
-        },
-        "description": "Collection of deposit requests made by a specific user."
+      "schema": {
+        "$ref": "#/entities/Deposit"
+      },
+      "description": "Collection of deposit requests made by a specific user."
     },
     "/users/{userId}/withdrawals/{withdrawalId}": {
-        "schema": {
-            "$ref": "#/entities/Withdrawal"
-        },
-        "description": "Collection of withdrawal requests made by a specific user."
+      "schema": {
+        "$ref": "#/entities/Withdrawal"
+      },
+      "description": "Collection of withdrawal requests made by a specific user."
     },
     "/agents/{agentId}": {
       "schema": {
         "$ref": "#/entities/Agent"
       },
       "description": "Collection of payment agents available for deposits and withdrawals."
+    },
+    "/settings/{settingsId}": {
+      "schema": {
+        "$ref": "#/entities/PlatformSettings"
+      },
+      "description": "Global platform settings. Expects a single document with id 'platform'."
     }
   }
 }
