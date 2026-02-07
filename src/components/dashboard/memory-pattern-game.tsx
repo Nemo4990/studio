@@ -125,7 +125,7 @@ export default function MemoryPatternGame() {
     
     const taskId = '12';
     const taskTitle = 'Memory Pattern Recall';
-    const reward = 500;
+    const reward = 400;
 
     const userSubmissionsRef = collection(firestore, 'users', user.id, 'submissions');
     const newSubmissionRef = doc(userSubmissionsRef);

@@ -59,7 +59,7 @@ export default function LogicPuzzleGame() {
     
     const taskId = '13';
     const taskTitle = 'Logic Puzzle Solving';
-    const reward = 800;
+    const reward = 480;
 
     const userSubmissionsRef = collection(firestore, 'users', user.id, 'submissions');
     const newSubmissionRef = doc(userSubmissionsRef);
@@ -149,7 +149,7 @@ export default function LogicPuzzleGame() {
                     <h2 className="font-headline text-3xl font-bold mb-2">Correct!</h2>
                     <p className="text-muted-foreground mb-6 max-w-md">You've successfully solved the puzzle. Your mind is sharp!</p>
                     <Button onClick={handleClaimReward} disabled={isSubmitting}>
-                        {isSubmitting ? 'Submitting...' : 'Claim Your 800 Coin Reward'}
+                        {isSubmitting ? 'Submitting...' : 'Claim Your 480 Coin Reward'}
                     </Button>
                 </>
             ) : (
