@@ -92,7 +92,7 @@ export default function SettingsPage() {
         title: 'Password Reset Email Sent',
         description: `An email has been sent to ${user.email} with instructions.`,
       });
-    } catch (error: any) => {
+    } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Request Failed',
