@@ -1,0 +1,13 @@
+{
+  "hosting": {
+    "rewrites": [
+      {
+        "source": "**",
+        "apphosting": {
+          "backendId": "nextn",
+          "region": "us-central1"
+        }
+      }
+    ]
+  }
+}
