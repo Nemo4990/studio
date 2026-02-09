@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "source": ".",
     "rewrites": [
       {
         "source": "**",
@@ -8,6 +9,12 @@
           "region": "us-central1"
         }
       }
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "example/**"
     ]
   }
 }
