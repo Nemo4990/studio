@@ -1,5 +1,4 @@
 build:
-  - rm -rf example
   - npm i
   - npm run build
 run:
